@@ -6,6 +6,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline as intspline
 from scipy.interpolate import RectBivariateSpline
 
 from fastpt import FASTPT as FASTPT
+#from fastpt.FASTPT import FASTPT
 from fastpt.P_extend import k_extend
 
 from cosmosis.datablock import names
@@ -96,7 +97,8 @@ def get_Pk_basis_funcs(block, pt_type,
     log_knl = np.log(knl)
 
     n_pad = len(klin_fpt)
-    fastpt = FASTPT.FASTPT(klin_fpt, to_do=['one_loop_dd'], 
+    #fastpt = FASTPT.FASTPT(klin_fpt, to_do=['one_loop_dd'], 
+    fastpt = FASTPT(klin_fpt, to_do=['one_loop_dd'], 
         low_extrap=-5, high_extrap=3, n_pad=n_pad)
 
     if pt_type in ['oneloop_lag_bk']:
@@ -127,11 +129,15 @@ def get_Pk_basis_funcs(block, pt_type,
         if output_nl_grid:   
             # interpolate to nl k grid.
             for key, pk in PXXNL_b1b2bsb3nl_z0.items():
-                if key == "sig4":
+                # Sujeong: Maybe this `if' condition below should be for "sig3nl"? 
+                # pk with "sig3nl" is one number but pk with "sig4" is an array. 
+                # Replaced sig4 with sig3nl. Should check with Shivam later.  
+                #if key == "sig4":
+                if key == "sig3nl":
                     PXXNL_b1b2bsb3nl_z0[key] = pk*np.ones_like(knl)
                 else:
                     PXXNL_b1b2bsb3nl_z0[key] = intspline(log_klin_fpt, pk)(log_knl)
-
+                    
         #Apply growth factor to make k,z arrays
         PXXNL_out = {}
         for key, pk in PXXNL_b1b2bsb3nl_z0.items():
