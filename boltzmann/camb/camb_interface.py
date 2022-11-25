@@ -404,6 +404,7 @@ def save_derived_parameters(r, p, block):
     derived = r.get_derived_params()
     for k, v in derived.items():
         block[names.distances, k] = v
+
     block[names.distances, 'rs_zdrag'] = block[names.distances, 'rdrag']
     
     p.omegal = 1 - p.omegam - p.omk
@@ -449,6 +450,9 @@ def save_distances(r, p, block, more_config):
     d_L = r.luminosity_distance(z_background)
     block[names.distances, "D_L"] = d_L
 
+    # Sujeong: chistar eeded for CMB lensing
+    block[names.distances, "chistar"] = r.comoving_radial_distance(block[names.distances, 'zstar'])
+    
     # Deal with mu(0), which is -np.inf
     mu = np.zeros_like(d_L)
     pos = d_L > 0
