@@ -7,7 +7,8 @@ import traceback
 
 # Finally we can now import camb
 import camb
-
+from camb.dark_energy import DarkEnergyModel
+from camb.baseconfig import F2003Class
 
 cosmo = names.cosmological_parameters
 
@@ -115,6 +116,8 @@ def setup(options):
     
     more_config['use_tabulated_w'] = options.get_bool(opt, 'use_tabulated_w', default=False)
     more_config['use_ppf_w'] = options.get_bool(opt, 'use_ppf_w', default=False)
+    more_config['dark_energy_model'] = options.get_string(opt, 'dark_energy_model', default='fluid')
+
     more_config['do_bao'] = options.get_bool(opt, 'do_bao', default=True)
     
     more_config["nonlinear_params"] = get_optional_params(options, opt, ["halofit_version", "Min_kh_nonlinear"])
@@ -229,21 +232,29 @@ def extract_reionization_params(block, config, more_config):
     return reion
 
 def extract_dark_energy_params(block, config, more_config):
-    if more_config['use_ppf_w']:
-        de_class = camb.dark_energy.DarkEnergyPPF
-    else:
-        de_class = camb.dark_energy.DarkEnergyFluid
 
-    dark_energy = de_class()
-    if more_config['use_tabulated_w']:
-        a = block[names.de_equation_of_state, 'a']
-        w = block[names.de_equation_of_state, 'w']
-        dark_energy.set_w_a_table(a, w)
+    model = more_config['dark_energy_model']
+    if more_config['use_ppf_w']:
+        dark_energy = F2003Class.make_class_named('DarkEnergyPPF', DarkEnergyModel)
     else:
-        w0 = block.get_double(cosmo, 'w', default=-1.0)
-        wa = block.get_double(cosmo, 'wa', default=0.0)
-        cs2 = block.get_double(cosmo, 'cs2_de', default=1.0)
-        dark_energy.set_params(w=w0, wa=wa, cs2=cs2)
+        dark_energy = F2003Class.make_class_named(model, DarkEnergyModel)
+
+    if model == 'fluid' or model == 'DarkEnergyPPF' or model == 'ppf':
+        if more_config['use_tabulated_w']:
+            a = block[names.de_equation_of_state, 'a']
+            w = block[names.de_equation_of_state, 'w']
+            dark_energy.set_w_a_table(a, w)
+        else:
+            w0 = block.get_double(cosmo, 'w', default=-1.0)
+            wa = block.get_double(cosmo, 'wa', default=0.0)
+            cs2 = block.get_double(cosmo, 'cs2_de', default=1.0)
+            dark_energy.set_params(w=w0, wa=wa, cs2=cs2)
+    elif model == 'AxionEffectiveFluid':
+            w_n = block.get_double(cosmo, 'w_n', default=1.0)
+            zc  = 10**block.get_double(cosmo, 'log10zc_ede', default=3)
+            fde_zc = block.get_double(cosmo, 'f_ede_zc', default=0.001)
+            theta_i = 0.5*np.pi*block.get_double(cosmo, 'theta_i_o_pi', default=1.0)
+            dark_energy.set_params(w_n=w_n, zc=zc, fde_zc=fde_zc, theta_i=theta_i)
 
     return dark_energy
 
