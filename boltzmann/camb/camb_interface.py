@@ -10,6 +10,8 @@ import camb
 from camb.dark_energy import DarkEnergyModel
 from camb.baseconfig import F2003Class
 
+import pdb
+
 cosmo = names.cosmological_parameters
 
 MODE_BG = "background"
@@ -117,7 +119,9 @@ def setup(options):
     more_config['use_tabulated_w'] = options.get_bool(opt, 'use_tabulated_w', default=False)
     more_config['use_ppf_w'] = options.get_bool(opt, 'use_ppf_w', default=False)
     more_config['dark_energy_model'] = options.get_string(opt, 'dark_energy_model', default='fluid')
-
+    if (more_config['dark_energy_model'] == 'EarlyQuintessence'):
+        more_config['use_zc'] = options.get_bool(opt, 'use_zc', default=False)
+    
     more_config['do_bao'] = options.get_bool(opt, 'do_bao', default=True)
     
     more_config["nonlinear_params"] = get_optional_params(options, opt, ["halofit_version", "Min_kh_nonlinear"])
@@ -255,7 +259,19 @@ def extract_dark_energy_params(block, config, more_config):
             fde_zc = block.get_double(cosmo, 'f_ede_zc', default=0.001)
             theta_i = 0.5*np.pi*block.get_double(cosmo, 'theta_i_o_pi', default=1.0)
             dark_energy.set_params(w_n=w_n, zc=zc, fde_zc=fde_zc, theta_i=theta_i)
-
+    elif model == 'EarlyQuintessence':
+            use_zc = more_config['use_zc']
+            n = block.get_double(cosmo, 'n', 3.0)
+            f = block.get_double(cosmo, 'f', 0.05)
+            m = block.get_double(cosmo, 'm', 5e-54)
+            theta_i = block.get_double(cosmo, 'theta_i', 3.0)
+            zc = 10.**block.get_double(cosmo, 'log10zc', 3.5)
+            fde_zc = block.get_double(cosmo, 'fde_zc', 0.1)
+            if (use_zc):
+                dark_energy.set_params(n=n, theta_i=theta_i, zc=zc, fde_zc=fde_zc, use_zc = use_zc)
+            else:
+                dark_energy.set_params(n=n, f=f, m=m, theta_i=theta_i, use_zc=use_zc)
+            
     return dark_energy
 
 def extract_initial_power_params(block, config, more_config):
