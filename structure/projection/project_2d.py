@@ -195,7 +195,12 @@ class GalaxyIntrinsicPower3D(Power3D):
 
 class WeylPower3D(Power3D):
     section = "weyl_curvature_power_nl"
+    lin_section = "weyl_curvature_power_lin"
     source_specific = False
+
+class WeylMatterPower3D(Power3D):
+    section = "weyl_curvature_matter_spectrum_nl"
+    source_specific = True
 
 class MatterPower3DPPF(Power3D):
     section = "matter_power_nl"
@@ -294,6 +299,9 @@ class Spectrum(object):
         elif self.prefactor_type[0]=="mag":
             prefactor *= self.get_magnification_prefactor(block,
                 self.sample_a, bin1) * self.source.lensing_prefactor
+        elif self.prefactor_type[0]=="mag_weyl":
+            prefactor *= self.get_magnification_prefactor(block,
+                self.sample_a, bin1) * self.source.lensing_weyl_prefactor
 
         # second prefactor
         if self.prefactor_type[1] is None:
@@ -305,6 +313,9 @@ class Spectrum(object):
         elif self.prefactor_type[1]=="mag":
             prefactor *= self.get_magnification_prefactor(block,
                 self.sample_b, bin2) * self.source.lensing_prefactor
+        elif self.prefactor_type[1]=="mag_weyl":
+            prefactor *= self.get_magnification_prefactor(block,
+                self.sample_a, bin2) * self.source.lensing_weyl_prefactor
 
         return prefactor
 
@@ -962,6 +973,15 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", None)
         has_rsd = False
 
+   class WeylIntrinsic(Spectrum):
+        power_3d_type = MatterwIntrinsicPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "N")
+        autocorrelation = False
+        name = names.shear_cl_gi
+        prefactor_type = ("lensing_weyl", None)
+        has_rsd = False
+
     class IntrinsicIntrinsic(Spectrum):
         power_3d_type = IntrinsicPower3D
         kernel_types = ("N", "N")
@@ -1002,6 +1022,15 @@ class SpectrumType(Enum):
         prefactor_type = ("mag", "mag")
         has_rsd = False
 
+    class MagnificationwMagnificationw(Spectrum):
+        power_3d_type = WeylPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "W_W")
+        autocorrelation = True
+        name = "magnification_cl"
+        prefactor_type = ("mag_weyl", "mag_weyl")
+        has_rsd = False
+
     class PositionShear(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("N", "W")
@@ -1010,6 +1039,14 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
+    class PositionWeyl(Spectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "W_W")
+        autocorrelation = False
+        name = "galaxy_shear_cl"
+        prefactor_type = (None, "lensing_weyl")
+        has_rsd = False
     class DensityIntrinsic(Spectrum):
         power_3d_type = MatterIntrinsicPower3D
         kernel_types = ("N", "N")
@@ -1026,12 +1063,30 @@ class SpectrumType(Enum):
         prefactor_type = ("mag", None)
         has_rsd = False
 
+    class MagnificationwIntrinsic(Spectrum):
+        power_3d_type = MatterwIntrinsicPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "N")
+        autocorrelation = False
+        name = "magnification_intrinsic_cl"
+        prefactor_type = ("mag_weyl", None)
+        has_rsd = False
+
     class MagnificationShear(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("W", "W")
         autocorrelation = False
         name = "magnification_shear_cl"
         prefactor_type = ("mag", "lensing")
+        has_rsd = False
+
+    class MagnificationwWeyl(Spectrum):
+        power_3d_type = WeylPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "W_W")
+        autocorrelation = False
+        name = "magnification_shear_cl"
+        prefactor_type = ("mag_weyl", "lensing_weyl")
         has_rsd = False
 
     class ShearCmbkappa(Spectrum):
@@ -1113,6 +1168,15 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
+    class LingalWeyl(LingalShearSpectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "W_W")
+        autocorrelation = False
+        name = "galaxy_shear_cl"
+        prefactor_type = (None, "lensing_weyl")
+        has_rsd = False
+
     class LingalMagnification(LingalLensingSpectrum):
         autocorrelation = False
         power_3d_type = MatterPower3D
@@ -1120,6 +1184,14 @@ class SpectrumType(Enum):
         autocorrelation = False
         name = "galaxy_magnification_cl"
         prefactor_type = (None, "mag")
+        has_rsd = False
+    class LingalMagnificationw(LingalMagnificationSpectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "W_W")
+        autocorrelation = False
+        name = "galaxy_magnification_cl"
+        prefactor_type = (None, "mag_weyl")
         has_rsd = False
 
     class LingalIntrinsic(LingalLensingSpectrum):
