@@ -199,7 +199,7 @@ class WeylPower3D(Power3D):
     source_specific = False
 
 class WeylMatterPower3D(Power3D):
-    section = "weyl_curvature_matter_spectrum_nl"
+    section = "weyl_curvature_matter_power_nl"
     source_specific = True
 
 class MatterPower3DPPF(Power3D):
