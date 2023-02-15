@@ -201,6 +201,9 @@ class WeylPower3D(Power3D):
 class WeylMatterPower3D(Power3D):
     section = "weyl_curvature_matter_power_nl"
     source_specific = True
+class MatterwIntrinsicPower3D(Power3D):
+    section = "matterw_intrinsic_power"
+    source_specific = True
 
 class MatterPower3DPPF(Power3D):
     section = "matter_power_nl"
@@ -973,7 +976,7 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", None)
         has_rsd = False
 
-   class WeylIntrinsic(Spectrum):
+    class WeylIntrinsic(Spectrum):
         power_3d_type = MatterwIntrinsicPower3D
         bias_correction_factors = 0
         kernel_types = ("W_W", "N")
