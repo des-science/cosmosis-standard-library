@@ -1171,7 +1171,7 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
-    class LingalWeyl(LingalShearSpectrum):
+    class LingalWeyl(LingalLensingSpectrum):
         power_3d_type = WeylMatterPower3D
         bias_correction_factors = 1
         kernel_types = ("N", "W_W")
