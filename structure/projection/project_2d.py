@@ -1188,7 +1188,7 @@ class SpectrumType(Enum):
         name = "galaxy_magnification_cl"
         prefactor_type = (None, "mag")
         has_rsd = False
-    class LingalMagnificationw(LingalMagnificationSpectrum):
+    class LingalMagnificationw(LingalLensingSpectrum):
         power_3d_type = WeylMatterPower3D
         bias_correction_factors = 1
         kernel_types = ("N", "W_W")
