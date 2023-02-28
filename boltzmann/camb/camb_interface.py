@@ -501,7 +501,7 @@ def compute_growth_rates(r, block, P_tot, k, z, more_config):
 
     # Evaluate it at the smallest k, for the 
     kmin = k.min()
-    P_kmin = P_tot(z, kmin)
+    P_kmin = P_tot.P(z, kmin)
 
     D = np.sqrt(P_kmin / P_kmin[0]).squeeze()
     a = 1/(1+z)
