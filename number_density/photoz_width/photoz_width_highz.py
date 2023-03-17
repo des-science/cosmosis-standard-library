@@ -3,13 +3,12 @@ from cosmosis.datablock import option_section, names
 from scipy.interpolate import interp1d
 import numpy as np
 
-MODES = ["multiplicative", "additive", "core"]
+MODES = ["stretch"]
 
 def nz_stats(z, nz):
     meanz = np.sum(z * nz) / np.sum(nz)
     stdz = np.sqrt(np.sum((z-meanz)**2 * nz) / np.sum(nz))
     return meanz, stdz
-
 
 def setup(options):
     mode = options[option_section, "mode"]
@@ -42,24 +41,40 @@ def execute(block, config):
         bin_name = "bin_%d" % i
         nz = block[pz, bin_name]
         if config["per_bin"]:
-            bias = block[biases, "bias_%d" % i]
+            stretch = block[biases, "width_%d" % i]
+            lowz = block[biases, "lowz_%d" % i]
         else:
-            bias = block[biases, "bias_0"]
-        f = interp1d(z, nz, kind=interpolation,
-                     fill_value=0.0, bounds_error=False)
-        if mode == "multiplicative":
-            nz_biased = f(z * (1 - bias))
-        elif mode == "additive":
-            nz_biased = f(z - bias)
-        elif mode == "core":
+            stretch = block[biases, "width_0"]
+            lowz = block[biases, "lowz_0"]
+
+        if mode == "stretch":
+            zmean = np.average(z, weights=nz)
+            f = interp1d(stretch * (z-zmean) + zmean, nz, kind='linear', fill_value=0.0, bounds_error=false)
+            f2 = interp1d(z, nz, kind='linear', fill_value=0.0, bounds_error=false)
             meanz, stdz = nz_stats(z, nz)
-            nz_biased = np.where(
+            nz_new = np.where(
                 (z > meanz - 2.0 * stdz) & (z < meanz + 2.0 * stdz),
-                f(z - bias),
-                f(z)
+                f(z),
+                f2(z)
             )
+            nz_biased = nz_new
+            nz_biased /= np.trapz(nz_biased, z)
+
+            #moving the lowz fraction part
+            f = interp1d(z, nz_biased, kind='linear', fill_value=0.0, bounds_error=false)
+            area_total = np.trapz(nz_biased, z)
+            area_lowz = np.trapz(nz_biased[z < 0.5], z[z < 0.5])
+            ratio = area_lowz / area_total
+            nz_new2 = np.where(
+                (z > 0.5),
+                f(z),
+                lowz*f(z) / ratio
+            )
+            nz_biased = nz_new2
+
         else:
             raise ValueError("Unknown photo-z mode")
+
         # normalize
         nz_biased /= np.trapz(nz_biased, z)
         block[pz, bin_name] = nz_biased
