@@ -1,13 +1,13 @@
 """
 The likelihood module for the DES Y5 SN simulated dataset
-author: Sujeong Lee 
+author: Sujeong Lee
 """
 
 from cosmosis.gaussian_likelihood import GaussianLikelihood
 from cosmosis.datablock import names
 import os
 import numpy as np
-
+import pandas as pd 
 
 # Default is to use DES only SN. To use DES+LOWZ SN, set the data_file 
 # and covmat_file parameters in the ini file 
@@ -24,7 +24,8 @@ class DESY5SNLikelihood(GaussianLikelihood):
     x_section = names.distances
     x_name = "z"
     y_section = names.distances
-    y_name = "mu"
+    #y_name = "mu"
+    y_name = "D_A"
     like_name = "desy5sn"
 
 
@@ -38,27 +39,30 @@ class DESY5SNLikelihood(GaussianLikelihood):
         """
         filename = self.options.get_string("data_file", default=default_data_file)
         print("Loading DES Y5 SN data from {}".format(filename))
-
+        data = pd.read_csv(filename,delim_whitespace=True, comment='#')
+        #import ipdb
+        #ipdb.set_trace()
+        self.origlen = len(data)
         # The only columns that we actually need here are the redshift,
         # distance modulus and distance modulus error
-        # DES Y5 SN data provides distance modulus, so we need to convert it to the apparent magnitude first 
-        data = np.genfromtxt(filename).T[1:,:][:,1:]
-        z = data[2]
-        # distance modulus
-        mu_obs = data[4]
-        # magnitude obtained by subtracting the absolute magnitude (DES uses) from the distance modulus
-        m_obs = mu_obs + M_fid
 
-        # We will need mag_obs_err later, when building the covariance,
-        # so save it for now.
-        # This also needs to be corrected? 
-        # No constant substraction doesn't affect error. 
-        self.mag_obs_err = data[5]
+        self.ww = (data['zHD']>0.00) 
+        #use the vpec corrected redshift for zCMB 
+        self.zCMB = data['zHD'][self.ww] 
+        self.zHEL = data['zHEL'][self.ww]
+        # distance modulus
+        self.mu_obs = data['MU'][self.ww]
+
+        # DES Y5 SN data provides distance modulus, so we need to convert it to the apparent magnitude first 
+        # magnitude obtained by subtracting the absolute magnitude from the distance modulus
+        self.m_obs = self.mu_obs + M_fid
+        # Constant substraction (F_fid) doesn't affect error (true?) so we use mu observational err as mag_obs_err 
+        self.mag_obs_err = data['MUERR'][self.ww]
 
         # Return this to the parent class, which will use it
         # when working out the likelihood
-        print("Found {} DES SN 5 supernovae (or bins if you used the binned data file)".format(len(z)))
-        return z, m_obs
+        print(f"Found {len(self.zCMB)} DES SN 5 supernovae (or bins if you used the binned data file)")
+        return self.zCMB, self.m_obs
 
     def build_covariance(self):
         """Run once at the start to build the covariance matrix for the data"""
@@ -85,31 +89,34 @@ class DESY5SNLikelihood(GaussianLikelihood):
 
         # Return the covariance; the parent class knows to invert this
         # later to get the precision matrix that we need for the likelihood.
+
+        C = C[self.ww][:, self.ww]
+
         return C
 
     def extract_theory_points(self, block):
-
+        """
+        Run once per parameter set to extract the mean vector that our
+        data points are compared to.  For the Hubble flow set, we compare to the 
+        cosmological model. For the calibrators we compare to the Cepheid distances.
+        """
         import scipy.interpolate
 
-        # Pull out mu and z from the block.
-        # self.x_section etc. are defined above - we make them variables
-        # so that the user can override them in the ini file.
-        # We have to cut off the first element z=0, because mu is not finite
-        # there and this confuses the interpolator.
-        theory_x = block[self.x_section, self.x_name][1:]
-        theory_y = block[self.y_section, self.y_name][1:]
+        # Pull out theory mu and z from the block.
+        theory_x = block[self.x_section, self.x_name]
+        theory_y = block[self.y_section, self.y_name]
+        theory_ynew = self.zCMB * np.nan
 
-        # This makes an interpolation function
+        # Interpolation function of theory so we can evaluate at redshifts of the data
         f = scipy.interpolate.interp1d(theory_x, theory_y, kind=self.kind)
-
-        # Actually do the interpolation at the data redshifts
-        # This is the apparent magnitude
-        theory = np.atleast_1d(f(self.data_x))
+        
+        zcmb = self.zCMB
+        zhel = self.zHEL
+        theory_ynew = 5.0*np.log10((1.0+zcmb)*(1.0+zhel)*np.atleast_1d(f(zcmb)))+25.
 
         # Add the absolute supernova magnitude and return
         M = block[names.supernova_params, "M"]
-        #offset = block[names.supernova_params, "offset"]
-        return theory + M
+        return theory_ynew + M
 
 
 # This takes our class and turns it into 
