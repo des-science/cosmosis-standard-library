@@ -8,7 +8,7 @@ from des_ia_lib.common import resample_power
 import numpy as np
 
 # We now return you to your module.
-
+import ipdb
 
 from cosmosis.datablock import names, option_section
 import scipy.interpolate as interp
@@ -233,12 +233,14 @@ def get_IA_terms(
 
 
 def setup(options):
+
     sub_lowk = options.get_bool(option_section, "sub_lowk", False)
     ia_model = options.get_string(option_section, "ia_model", "nla")
     name = options.get_string(option_section, "name", default="").lower()
     do_galaxy_intrinsic = options.get_bool(option_section, "do_galaxy_intrinsic", False)
     no_IA_E = options.get_bool(option_section, "no_IA_E", False)
     no_IA_B = options.get_bool(option_section, "no_IA_B", False)
+    use_weyl = options.get_bool(option_section, "use_weyl", False)
 
     if name:
         suffix = "_" + name
@@ -251,6 +253,7 @@ def setup(options):
         do_galaxy_intrinsic,
         no_IA_E,
         no_IA_B,
+        use_weyl,
     )
 
 
@@ -262,14 +265,14 @@ def execute(block, config):
         do_galaxy_intrinsic,
         no_IA_E,
         no_IA_B,
+        use_weyl,
     ) = config
-
+    
     # Load linear and non-linear matter power spectra
     lin = names.matter_power_lin
     nl = names.matter_power_nl
     cosmo = names.cosmological_parameters
     omega_m = block[cosmo, "omega_m"]
-
     # Load the matter power spectra
     z_lin, k_lin, p_lin = block.get_grid(lin, "z", "k_h", "p_k")
     z_nl, k_nl, p_nl = block.get_grid(nl, "z", "k_h", "p_k")
@@ -408,6 +411,17 @@ def execute(block, config):
         "p_k",
         gi_e_total,
     )
+    # Total GI contribution - add weyl-intrinsic 
+    if use_weyl == True: 
+        block.put_grid(
+            "matterw_intrinsic_power" + suffix,
+            "z",
+            z_lin,
+            "k_h",
+            k_use,
+            "p_k",
+            gi_e_total,
+        )
 
     # We also save the EE total to intrinsic power for consistency with other modules
     block.put_grid(
