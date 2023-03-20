@@ -201,6 +201,7 @@ class WeylPower3D(Power3D):
 class WeylMatterPower3D(Power3D):
     section = "weyl_curvature_matter_power_nl"
     source_specific = True
+    
 class MatterwIntrinsicPower3D(Power3D):
     section = "matterw_intrinsic_power"
     source_specific = True
@@ -228,7 +229,9 @@ def get_lensing_prefactor(block):
 
 def get_lensing_weyl_prefactor(block):
     h = block[names.cosmological_parameters, "h0"]
-    shear_weyl_scaling = 1.0 / h**2
+    #shear_weyl_scaling = 1.0 / h**2
+    # SJ: weyl power spectrum has negative sign.. 
+    shear_weyl_scaling = -1.0 / h**2
     return shear_weyl_scaling
 
 class Spectrum(object):
@@ -1446,7 +1449,6 @@ class SpectrumCalculator(object):
 
                     # power_key is the power_3d class and suffix
                     power_key = (spectrum.power_3d_type, power_suffix)
-
                     # The self in the line below is not a mistake - the source objects
                     # for the spectrum class is the SpectrumCalculator itself
                     s = spectrum(self, sample_name_a, sample_name_b, power_key, save_name)
@@ -1526,7 +1528,7 @@ class SpectrumCalculator(object):
         # self.kernels dictionary.
         for key in self.req_kernel_keys:
             kernel_type, sample_name = key
-
+            
             # For all the sources we need the n(z)
             if sample_name not in self.kernels:
                 section_name = "nz_"+sample_name
@@ -1602,7 +1604,6 @@ class SpectrumCalculator(object):
 
 
     def compute_spectrum(self, block, spectrum):
-
         # Save some naming about the spectrum
         sep_name = "ell"
         block[spectrum.section_name, "save_name"] = spectrum.save_name
