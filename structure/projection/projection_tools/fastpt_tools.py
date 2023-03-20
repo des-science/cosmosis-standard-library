@@ -124,16 +124,12 @@ def get_Pk_basis_funcs(block, pt_type,
         PXXNL_b1b2bsb3nl_z0 = {"Pd1d2" : PXXNL_b1b2bsb3nl[2],
             "Pd2d2" : PXXNL_b1b2bsb3nl[3], "Pd1s2" : PXXNL_b1b2bsb3nl[4],
             "Pd2s2" : PXXNL_b1b2bsb3nl[5], "Ps2s2" : PXXNL_b1b2bsb3nl[6],
-            "sig3nl" : PXXNL_b1b2bsb3nl[7], "sig4" : PXXNL_b1b2bsb3nl[8]}
+            "sig3nl" : PXXNL_b1b2bsb3nl[8], "sig4" : PXXNL_b1b2bsb3nl[7]}
 
         if output_nl_grid:   
             # interpolate to nl k grid.
             for key, pk in PXXNL_b1b2bsb3nl_z0.items():
-                # Sujeong: Maybe this `if' condition below should be for "sig3nl"? 
-                # pk with "sig3nl" is one number but pk with "sig4" is an array. 
-                # Replaced sig4 with sig3nl. Should check with Shivam later.  
-                #if key == "sig4":
-                if key == "sig3nl":
+                if key == "sig4":
                     PXXNL_b1b2bsb3nl_z0[key] = pk*np.ones_like(knl)
                 else:
                     PXXNL_b1b2bsb3nl_z0[key] = intspline(log_klin_fpt, pk)(log_knl)
