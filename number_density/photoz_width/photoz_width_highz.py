@@ -49,8 +49,8 @@ def execute(block, config):
 
         if mode == "stretch":
             zmean = np.average(z, weights=nz)
-            f = interp1d(stretch * (z-zmean) + zmean, nz, kind='linear', fill_value=0.0, bounds_error=false)
-            f2 = interp1d(z, nz, kind='linear', fill_value=0.0, bounds_error=false)
+            f = interp1d(stretch * (z-zmean) + zmean, nz, kind='linear', fill_value=0.0, bounds_error=False)
+            f2 = interp1d(z, nz, kind='linear', fill_value=0.0, bounds_error=False)
             meanz, stdz = nz_stats(z, nz)
             nz_new = np.where(
                 (z > meanz - 2.0 * stdz) & (z < meanz + 2.0 * stdz),
@@ -61,7 +61,7 @@ def execute(block, config):
             nz_biased /= np.trapz(nz_biased, z)
 
             #moving the lowz fraction part
-            f = interp1d(z, nz_biased, kind='linear', fill_value=0.0, bounds_error=false)
+            f = interp1d(z, nz_biased, kind='linear', fill_value=0.0, bounds_error=False)
             area_total = np.trapz(nz_biased, z)
             area_lowz = np.trapz(nz_biased[z < 0.5], z[z < 0.5])
             ratio = area_lowz / area_total
