@@ -77,7 +77,7 @@ def amp_3d(C, num_z, num_k):
 
 
 def resample_k(k_in, P_in, k_out):
-    p_interp = Pk_interp(k_lin, P_in)
+    p_interp = Pk_interp(k_in, P_in)
     return p_interp(k_out)
 
 
@@ -100,8 +100,11 @@ def get_IA_terms(
     z_piv,
     Omega_m,
     sub_lowk=False,
+    # SJ
+    Pwdlin=None, 
+    Pwdnl=None,
+    #**kwargs
 ):
-
     # This function reads in PT IA terms (computed at z=0), interpolates them onto k_out,
     # evolves them in z using the growth function Dz, and combines them into physically motivated terms
     # C1, C2 are amplitudes for TT and TA contributions and can be either scalars, 1d array with length Dz, or 2d array with shape (len(Dz), len(k_nl))
@@ -110,7 +113,7 @@ def get_IA_terms(
     # get from the block
     k_use = k_nl  # this sets which k grid will be used. Changing this may break some things.
     P_IA_dict = {}
-    for key in [
+    keyss = [
         "P_tt_EE",
         "P_tt_BB",
         "P_ta_dE1",
@@ -122,7 +125,9 @@ def get_IA_terms(
         "P_mix_D_EE",
         "P_mix_D_BB",
         "Plin",
-    ]:
+    ]
+
+    for key in keyss:
         z, k_IA, p = block.get_grid("fastpt", "z", "k_h", key)
         if sub_lowk and key in [
             "P_tt_EE",
@@ -198,14 +203,22 @@ def get_IA_terms(
     p_ta_ii_BB = Cdel ** 2 * P_IA_dict["P_ta_BB"]
     p_ta_gi = Cdel * (P_IA_dict["P_ta_dE1"] + P_IA_dict["P_ta_dE2"])
 
+    #SJ: LA/NLA matter power 
     P_IA_out["lin_II_EE"] = C1 * C1 * P_IA_dict["Plin"]
     P_IA_out["nla_II_EE"] = C1 * C1 * P_IA_dict["P_nl"]
     P_IA_out["lin_GI"] = C1 * P_IA_dict["Plin"]
     P_IA_out["nla_GI"] = C1 * P_IA_dict["P_nl"]
+    # SJ add weyl nonlinear 
+    if Pwdlin is not None:
+        P_IA_dict["Pwdlin"] = Pwdlin
+        P_IA_dict["Pwdnl"] = Pwdnl
+        P_IA_out["lin_w_GI"] = C1 * P_IA_dict["Pwdlin"]
+        P_IA_out["nla_w_GI"] = C1 * P_IA_dict["Pwdnl"]
+
+    # TA
     P_IA_out["ta_II_EE"] = p_ta_ii_EE
     P_IA_out["ta_II_BB"] = p_ta_ii_BB
     P_IA_out["ta_GI"] = p_ta_gi
-
     # TT
     P_IA_out["tt_GI"] = C2 * (P_IA_dict["P_mix_A"] + P_IA_dict["P_mix_B"])
     P_IA_out["tt_II_EE"] = C2 * C2 * P_IA_dict["P_tt_EE"]
@@ -233,7 +246,7 @@ def get_IA_terms(
 
 
 def setup(options):
-
+    
     sub_lowk = options.get_bool(option_section, "sub_lowk", False)
     ia_model = options.get_string(option_section, "ia_model", "nla")
     name = options.get_string(option_section, "name", default="").lower()
@@ -267,15 +280,30 @@ def execute(block, config):
         no_IA_B,
         use_weyl,
     ) = config
-    
+
     # Load linear and non-linear matter power spectra
     lin = names.matter_power_lin
     nl = names.matter_power_nl
     cosmo = names.cosmological_parameters
     omega_m = block[cosmo, "omega_m"]
+    
+
+
     # Load the matter power spectra
     z_lin, k_lin, p_lin = block.get_grid(lin, "z", "k_h", "p_k")
     z_nl, k_nl, p_nl = block.get_grid(nl, "z", "k_h", "p_k")
+
+    if use_weyl:
+        # weyl power spectra 
+        zwdlin, kwdlin, pwdlin = block.get_grid("weyl_curvature_matter_power_lin", "z", "k_h", "p_k")
+        zwdnl, kwdnl, pwdnl = block.get_grid("weyl_curvature_matter_power_nl", "z", "k_h", "p_k")
+        pwdlin = resample_k(kwdlin, pwdlin, k_nl)
+        pwdnl = resample_k(kwdnl, pwdnl, k_nl)
+    else: 
+        pwdlin = None
+        pwdnl=None
+
+    #ipdb.set_trace()
 
     # use ind to handle mild scale-dependence in growth
     ind = np.where(k_lin > 0.03)[0][0]
@@ -319,8 +347,6 @@ def execute(block, config):
         bias_tt = block.get_double(ia_section, "bias_tt", 1.0)
         Adel = bias_ta * A1
 
-
-
     IA_terms, k_use = get_IA_terms(
         block,
         k_lin,
@@ -340,20 +366,29 @@ def execute(block, config):
         z_piv,
         omega_m,
         sub_lowk=sub_lowk,
+        # SJ 
+        Pwdlin=pwdlin, 
+        Pwdnl=pwdnl, 
     )
-
+    #ipdb.set_trace()
     ##### complete the proper IA model defintions.
     # Linear alignment modell
     if ia_model == "lin":
         ii_ee_total = E_factor * IA_terms["lin_II_EE"]
         ii_bb_total = 0.0 * IA_terms["ta_II_BB"]
         gi_e_total = E_factor * IA_terms["lin_GI"]
+        if use_weyl:
+            #iiw_ee_total = E_factor * IA_terms["linw_II_EE"]
+            giw_e_total = E_factor * IA_terms["li_w_GI"]
 
     # Non-linear linear alignment model
     elif ia_model == "nla":
         ii_ee_total = E_factor * IA_terms["nla_II_EE"]
         ii_bb_total = 0.0 * IA_terms["ta_II_BB"]
         gi_e_total = E_factor * IA_terms["nla_GI"]
+        if use_weyl:
+            #iiw_ee_total = E_factor * IA_terms["nlaw_II_EE"]
+            giw_e_total = E_factor * IA_terms["nla_w_GI"]
 
     # Tidal alignment model
     elif ia_model == "ta":
@@ -401,7 +436,6 @@ def execute(block, config):
         "intrinsic_power_bb" + suffix, "z", z_lin, "k_h", k_use, "p_k", ii_bb_total
     )
 
-    # Total GI contribution
     block.put_grid(
         names.matter_intrinsic_power + suffix,
         "z",
@@ -412,7 +446,7 @@ def execute(block, config):
         gi_e_total,
     )
     # Total GI contribution - add weyl-intrinsic 
-    if use_weyl == True: 
+    if use_weyl: 
         block.put_grid(
             "matterw_intrinsic_power" + suffix,
             "z",
@@ -420,14 +454,17 @@ def execute(block, config):
             "k_h",
             k_use,
             "p_k",
-            gi_e_total,
+            # weyl-intrinsic should have a negative sign. 
+            # That is supposed to be corrected by the weyl lensing prefactor that has negative sign in project_2d.
+            # So I will make this term force to be positive for now. 
+            # np.abs(giw_e_total),
+            giw_e_total
         )
 
     # We also save the EE total to intrinsic power for consistency with other modules
     block.put_grid(
         names.intrinsic_power + suffix, "z", z_lin, "k_h", k_use, "p_k", ii_ee_total
     )
-
     # If we've been told to include galaxy-intrinsic power then we
     # need to check if the galaxy bias has already been applied to
     # it or not. We'd prefer people not do that, apparently, so
