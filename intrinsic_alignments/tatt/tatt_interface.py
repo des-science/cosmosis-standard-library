@@ -303,8 +303,6 @@ def execute(block, config):
         pwdlin = None
         pwdnl=None
 
-    #ipdb.set_trace()
-
     # use ind to handle mild scale-dependence in growth
     ind = np.where(k_lin > 0.03)[0][0]
     Dz = np.sqrt(p_lin[:, ind] / p_lin[0, ind])
@@ -370,25 +368,20 @@ def execute(block, config):
         Pwdlin=pwdlin, 
         Pwdnl=pwdnl, 
     )
-    #ipdb.set_trace()
     ##### complete the proper IA model defintions.
     # Linear alignment modell
     if ia_model == "lin":
         ii_ee_total = E_factor * IA_terms["lin_II_EE"]
         ii_bb_total = 0.0 * IA_terms["ta_II_BB"]
         gi_e_total = E_factor * IA_terms["lin_GI"]
-        if use_weyl:
-            #iiw_ee_total = E_factor * IA_terms["linw_II_EE"]
-            giw_e_total = E_factor * IA_terms["li_w_GI"]
+        if use_weyl: giw_e_total = E_factor * IA_terms["li_w_GI"]
 
     # Non-linear linear alignment model
     elif ia_model == "nla":
         ii_ee_total = E_factor * IA_terms["nla_II_EE"]
         ii_bb_total = 0.0 * IA_terms["ta_II_BB"]
         gi_e_total = E_factor * IA_terms["nla_GI"]
-        if use_weyl:
-            #iiw_ee_total = E_factor * IA_terms["nlaw_II_EE"]
-            giw_e_total = E_factor * IA_terms["nla_w_GI"]
+        if use_weyl: giw_e_total = E_factor * IA_terms["nla_w_GI"]
 
     # Tidal alignment model
     elif ia_model == "ta":
@@ -454,10 +447,6 @@ def execute(block, config):
             "k_h",
             k_use,
             "p_k",
-            # weyl-intrinsic should have a negative sign. 
-            # That is supposed to be corrected by the weyl lensing prefactor that has negative sign in project_2d.
-            # So I will make this term force to be positive for now. 
-            # np.abs(giw_e_total),
             giw_e_total
         )
 
