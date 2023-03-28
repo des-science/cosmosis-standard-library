@@ -9,6 +9,8 @@ import traceback
 #ipdb.set_trace()
 
 # Finally we can now import mgcamb
+#import sys
+#sys.path.append('/global/u2/s/sjlee88/cosmosis-global-env/lib/python3.9/site-packages/camb-1.3.6-py3.9.egg/')
 import mgcamb 
 from mgcamb.dark_energy import DarkEnergyModel
 from mgcamb.baseconfig import F2003Class
@@ -322,8 +324,10 @@ def extract_nonlinear_params(block, config, more_config):
         **hmcode_params
     )
 
+# SJ edit: new function to read mg params 
+# Only validated for sig-mu and Linder_gamma.
 def extract_modified_gravity_params(block, config, more_config):
-    #model = more_config['modified_gravity_model'] 
+
     mgconfig = more_config['modified_gravity_params']  
 
     if mgconfig['MG_flag'] == 0: 
@@ -351,7 +355,6 @@ def extract_modified_gravity_params(block, config, more_config):
                 mgconfig['Funcofw_9']  = block.get_double(modified_gravity, 'OmegaX_idx_9' , default=0.7)
                 mgconfig['Funcofw_10'] = block.get_double(modified_gravity, 'OmegaX_idx_10', default=0.7)
                 mgconfig['Funcofw_11'] = block.get_double(modified_gravity, 'OmegaX_idx_11', default=0.7)
-
 
             if mgconfig['pure_MG_flag'] == 0:
                 print ( "Please set pure_MG_flag when setting MG_flag to 1")
@@ -439,6 +442,7 @@ def extract_modified_gravity_params(block, config, more_config):
                 mgconfig['lambda1_2'] = block.get_double(modified_gravity, 'B0')
                 mgconfig['B2'] = 0.5
                 mgconfig['ss'] = 4.0
+
             elif mgconfig['QSA_flag'] == 2: 
                 mgconfig['beta_star'] = block.get_double(modified_gravity, 'beta_star')
                 mgconfig['a_star'] = block.get_double(modified_gravity, 'a_star')
@@ -556,7 +560,6 @@ def extract_camb_params(block, config, more_config):
     #transfer = extract_transfer_params(block, config, more_config)
 
     # Get optional parameters from datablock.
-    # SJ note : get MG params from this block? 
     cosmology_params = get_optional_params(block, cosmo, 
         ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos",
          ("A_lens", "Alens")])
@@ -593,13 +596,14 @@ def extract_camb_params(block, config, more_config):
         NonLinearModel=nonlinear,
         **config,
     )
+
     # Setting up neutrinos by hand is hard. We let CAMB deal with it instead.
     p.set_cosmology(ombh2 = block[cosmo, 'ombh2'],
                     omch2 = block[cosmo, 'omch2'],
                     omk = block[cosmo, 'omega_k'],
                     **more_config["cosmology_params"],
                     **cosmology_params)
-    
+
     # Fix for CAMB version < 1.0.10
     if np.isclose(p.omnuh2, 0) and "nnu" in cosmology_params and not np.isclose(cosmology_params["nnu"], p.num_nu_massless): 
         p.num_nu_massless = cosmology_params["nnu"]
@@ -609,13 +613,13 @@ def extract_camb_params(block, config, more_config):
     # if want_thermal:
     p.Reion = reion
 
-    # SJ edit
-    # setting MG parameters
-    p.set_mgparams(**more_config['modified_gravity_params'])
-
     p.set_for_lmax(**more_config["lmax_params"])
     p.set_accuracy(**more_config["accuracy_params"])
 
+    # SJ edit
+    # setting MG parameters
+    p.set_mgparams(**more_config['modified_gravity_params'])
+    
     if want_perturbations:
         if "zmid" in more_config:
             z = np.concatenate((np.linspace(more_config['zmin'], 
@@ -767,9 +771,13 @@ def save_matter_power(r, p, block, more_config):
     fsigma_8 = r.get_fsigma8()[::-1]
     rs_DV, H, DA, F_AP = r.get_BAO(z, p).T
 
-    D = compute_growth_factor(r, block, P_tot, k, z, more_config)
+    #D = compute_growth_factor(r, block, P_tot, k, z, more_config)
+    
+    # copied from old mgcamb interface. Linder-gamma cannot produce the same D(z) with GR
+    # with the new D function 
+    D = sigma_8 / sigma_8[0]
     f = fsigma_8 / sigma_8
-
+    
     # Save growth rates and sigma_8
     block[names.growth_parameters, "z"] = z
     block[names.growth_parameters, "a"] = 1/(1+z)
