@@ -103,6 +103,4 @@ def execute(block, config):
             bin_ij = 'bin_{0}_{1}'.format(i + 1, 1)
             block[shear_cmbkappa, bin_ij] += A[i] * \
                     block[intrinsic_cmbkappa, bin_ij]
-
-
     return 0

@@ -1104,6 +1104,14 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", "lensing")
         has_rsd = False
 
+    class WeylCmbkappa(Spectrum):
+        power_3d_type = MatterPower3D
+        kernel_types = ("W_W", "K")
+        autocorrelation = False
+        name = "shear_cmbkappa_cl"
+        prefactor_type = ("lensing_weyl", "lensing")
+        has_rsd = False
+
     class CmbkappaCmbkappa(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("K", "K")
@@ -1134,6 +1142,14 @@ class SpectrumType(Enum):
         autocorrelation = False
         name = "magnification_cmbkappa_cl"
         prefactor_type = ("mag", "lensing")
+        has_rsd = False
+
+    class MagnificationwCmbkappa(Spectrum):
+        power_3d_type = MatterPower3D
+        kernel_types = ("W_W", "K")
+        autocorrelation = False
+        name = "magnificationw_cmbkappa_cl"
+        prefactor_type = ("mag_weyl", "lensing")
         has_rsd = False
 
     class DensityCmbkappa(Spectrum):
