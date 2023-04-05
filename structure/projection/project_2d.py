@@ -1103,13 +1103,14 @@ class SpectrumType(Enum):
         name = "shear_cmbkappa_cl"
         prefactor_type = ("lensing", "lensing")
         has_rsd = False
-
-    class WeylCmbkappa(Spectrum):
-        power_3d_type = MatterPower3D
-        kernel_types = ("W_W", "K")
+    
+    # SJ edit
+    class WeylCmbkappaw(Spectrum):
+        power_3d_type = WeylPower3D
+        kernel_types = ("W_W", "K_W")
         autocorrelation = False
         name = "shear_cmbkappa_cl"
-        prefactor_type = ("lensing_weyl", "lensing")
+        prefactor_type = ("lensing_weyl", "lensing_weyl")
         has_rsd = False
 
     class CmbkappaCmbkappa(Spectrum):
@@ -1120,12 +1121,30 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", "lensing")
         has_rsd = False
 
+    # SJ edit
+    class CmbkappawCmbkappaw(Spectrum):
+        power_3d_type = WeylPower3D
+        kernel_types = ("K_W", "K_W")
+        autocorrelation = True
+        name = "cmbkappa_cl"
+        prefactor_type = ("lensing_weyl", "lensing_weyl")
+        has_rsd = False
+
     class IntrinsicCmbkappa(Spectrum):
         power_3d_type = MatterIntrinsicPower3D
         kernel_types = ("N", "K")
         autocorrelation = False
         name = "intrinsic_cmbkappa_cl"
         prefactor_type = (None, "lensing")
+        has_rsd = False
+
+    # SJ edit
+    class IntrinsicCmbkappaw(Spectrum):
+        power_3d_type = MatterwIntrinsicPower3D
+        kernel_types = ("N", "K_W")
+        autocorrelation = False
+        name = "intrinsic_cmbkappa_cl"
+        prefactor_type = (None, "lensing_weyl")
         has_rsd = False
 
     class LingalCmbkappa(LingalLensingSpectrum):
@@ -1136,6 +1155,16 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
+    # SJ edit
+    class LingalCmbkappaw(LingalLensingSpectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "K_W")
+        autocorrelation = False
+        name = "galaxy_cmbkappa_cl"
+        prefactor_type = (None, "lensing_weyl")
+        has_rsd = False
+        
     class MagnificationCmbkappa(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("W", "K")
@@ -1144,12 +1173,13 @@ class SpectrumType(Enum):
         prefactor_type = ("mag", "lensing")
         has_rsd = False
 
-    class MagnificationwCmbkappa(Spectrum):
-        power_3d_type = MatterPower3D
-        kernel_types = ("W_W", "K")
+    # SJ edit
+    class MagnificationwCmbkappaw(Spectrum):
+        power_3d_type = WeylPower3D
+        kernel_types = ("W_W", "K_W")
         autocorrelation = False
-        name = "magnificationw_cmbkappa_cl"
-        prefactor_type = ("mag_weyl", "lensing")
+        name = "magnification_cmbkappa_cl"
+        prefactor_type = ("mag_weyl", "lensing_weyl")
         has_rsd = False
 
     class DensityCmbkappa(Spectrum):
@@ -1224,6 +1254,7 @@ class SpectrumType(Enum):
         name = "galaxy_magnification_cl"
         prefactor_type = (None, "mag")
         has_rsd = False
+
     class LingalMagnificationw(LingalLensingSpectrum):
         power_3d_type = WeylMatterPower3D
         bias_correction_factors = 1
@@ -1590,6 +1621,13 @@ class SpectrumCalculator(object):
                 self.kernels[sample_name].set_wwofchi_splines(self.chi_of_z,
                     self.dchidz, self.a_of_chi, clip=self.clip_chi_kernels,
                     dchi=self.shear_kernel_dchi)
+
+            elif kernel_type == 'K_W' and sample_name == 'cmb':
+                # SJ edit: this is actually same with 'K'. 
+                # but for the consistency with W_W, I keep it
+                chi_star = block['distances','chistar']
+                h0 = block[names.cosmological_parameters, "h0"]
+                self.kernels[sample_name].set_cmblensing_splines(self.chi_of_z, self.a_of_chi, chi_star*h0, clip = self.clip_chi_kernels)
 
             elif kernel_type == "F":
                 # This is the combined shear and IA kernel. We need to calculate

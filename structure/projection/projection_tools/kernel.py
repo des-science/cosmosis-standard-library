@@ -238,8 +238,10 @@ class TomoNzKernel(object):
             return self.cmblensing_spline
         elif kernel_type == "W_W":
             return self.wwchi_splines[bin_number]
+        elif kernel_type == "K_W":
+            return self.cmblensing_spline
         elif kernel_type == "F":
             return self.shear_ia_splines[bin_number]
         else:
             raise ValueError("""Invalid kernel_type: %s, 
-                should be one of N, W, K, W_W or F"""%(kernel_type))
+                should be one of N, W, K, W_W K_W or F"""%(kernel_type))
