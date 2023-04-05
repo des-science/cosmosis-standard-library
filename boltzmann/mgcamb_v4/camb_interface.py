@@ -43,7 +43,7 @@ matter_power_section_names = {
     'v_newtonian_baryon': 'baryon_velocity_power',
     'v_baryon_cdm': 'baryon_cdm_relative_velocity_power',
     # SJ edit
-    'weyl_matter':'weyl_curvature_matter_power'
+    #'weyl_matter':'weyl_curvature_matter_power'
 }
 
 
@@ -68,7 +68,7 @@ def get_optional_params(block, section, names):
 def get_choice(options, name, valid, default=None, prefix=''):
     choice = options.get_string(opt, name, default=default)
     if choice not in valid:
-        raise ValueError("Parameter setting '{}' in camb must be one of: {}.  You tried: {}".format(name, valid, choice))
+        raise ValueError("Parameter setting '{}' in mgcamb must be one of: {}.  You tried: {}".format(name, valid, choice))
     return prefix + choice
 
 def setup(options):
@@ -742,38 +742,53 @@ def save_matter_power(r, p, block, more_config):
 
     P_tot = None
 
-    for transfer_type in more_config['power_spectra']:
-        # Deal with case consistency in Weyl option
-        tt1 = transfer_type if transfer_type != 'weyl' else 'Weyl'
-        if transfer_type == 'weyl_matter':
-            tt1='delta_tot'; tt2='Weyl'
-        else: tt2=tt1
+    # MR: calculate properly power cross-spectra
+    _num_power = len(more_config['power_spectra'])
 
-        # Get an interpolator.  By default bicubic if size is large enough,
-        # otherwise it drops down to linear.
-        # First we do the linear version of the spectrum
-        P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, var1=tt1, var2=tt2, return_z_k=True,
-                                        extrap_kmax=more_config['kmax_extrapolate'])
-        assert P.islog
-        # P.P evaluates at k instead of logk
-        p_k = P.P(z, k, grid=True)
+    for t1 in range(_num_power):
+        for t2 in range(t1, _num_power):
 
-        # Save this for the growth rate later
-        if transfer_type == 'delta_tot':
-            P_tot = P
+            transfer_type_1 = more_config['power_spectra'][t1]
+            transfer_type_2 = more_config['power_spectra'][t2]
 
-        # Save the linear
-        section_name = matter_power_section_names[transfer_type] + "_lin"
-        block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
+            # Deal with case consistency in Weyl option
+            transfer_type_1 = transfer_type_1 if transfer_type_1 != 'weyl' else 'Weyl'
+            transfer_type_2 = transfer_type_2 if transfer_type_2 != 'weyl' else 'Weyl'
 
-        # Now if requested we also save the linear version
-        if p.NonLinear is not mgcamb.model.NonLinear_none:
-            # Exact same process as before
-            P = r.get_matter_power_interpolator(nonlinear=True, var1=tt1, var2=tt2,
-                                            extrap_kmax=more_config['kmax_extrapolate'])
+            # Get an interpolator.  By default bicubic if size is large enough,
+            # otherwise it drops down to linear.
+            # First we do the linear version of the spectrum
+            P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, 
+                                                              var1=transfer_type_1, 
+                                                              var2=transfer_type_2, 
+                                                              return_z_k=True,
+                                                              extrap_kmax=more_config['kmax_extrapolate'])
+            assert P.islog
+            # P.P evaluates at k instead of logk
             p_k = P.P(z, k, grid=True)
-            section_name = matter_power_section_names[transfer_type] + "_nl"
-            block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
+
+            # Save this for the growth rate later
+            if transfer_type_1 == 'delta_tot' and transfer_type_2 == 'delta_tot':
+                P_tot = P
+
+            # Save the linear
+            if transfer_type_1 == transfer_type_2:
+                section_name = matter_power_section_names[transfer_type_1.lower()] 
+            else:
+                section_name = matter_power_section_names[transfer_type_1.lower()] + '_' + matter_power_section_names[transfer_type_2.lower()]
+            
+            block.put_grid(section_name + "_lin", "z", z, "k_h", k, "p_k", p_k)
+
+            # Now if requested we also save the linear version
+            if p.NonLinear is not mgcamb.model.NonLinear_none:
+                # Exact same process as before
+                P = r.get_matter_power_interpolator(nonlinear=True, 
+                                                    var1=transfer_type_1, 
+                                                    var2=transfer_type_2, 
+                                                    extrap_kmax=more_config['kmax_extrapolate'])
+                p_k = P.P(z, k, grid=True)
+                block.put_grid(section_name + "_nl", "z", z, "k_h", k, "p_k", p_k)
+
 
     # Get growth rates and sigma_8
     sigma_8 = r.get_sigma8()[::-1]

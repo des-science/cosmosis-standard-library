@@ -254,6 +254,7 @@ def setup(options):
     no_IA_E = options.get_bool(option_section, "no_IA_E", False)
     no_IA_B = options.get_bool(option_section, "no_IA_B", False)
     use_weyl = options.get_bool(option_section, "use_weyl", False)
+    cross_spectra_section_name = options.get_string(option_section, "cross_spectra_section_name", "matter_power_weyl_curvature_power")
 
     if name:
         suffix = "_" + name
@@ -267,6 +268,7 @@ def setup(options):
         no_IA_E,
         no_IA_B,
         use_weyl,
+        cross_spectra_section_name,
     )
 
 
@@ -279,6 +281,7 @@ def execute(block, config):
         no_IA_E,
         no_IA_B,
         use_weyl,
+        cross_spectra_section_name,
     ) = config
 
     # Load linear and non-linear matter power spectra
@@ -294,9 +297,9 @@ def execute(block, config):
     z_nl, k_nl, p_nl = block.get_grid(nl, "z", "k_h", "p_k")
 
     if use_weyl:
-        # weyl power spectra 
-        zwdlin, kwdlin, pwdlin = block.get_grid("weyl_curvature_matter_power_lin", "z", "k_h", "p_k")
-        zwdnl, kwdnl, pwdnl = block.get_grid("weyl_curvature_matter_power_nl", "z", "k_h", "p_k")
+        # SJ edit: 
+        zwdlin, kwdlin, pwdlin = block.get_grid(cross_spectra_section_name+"_lin", "z", "k_h", "p_k")
+        zwdnl, kwdnl, pwdnl = block.get_grid(cross_spectra_section_name+"_nl", "z", "k_h", "p_k")
         pwdlin = resample_k(kwdlin, pwdlin, k_nl)
         pwdnl = resample_k(kwdnl, pwdnl, k_nl)
     else: 

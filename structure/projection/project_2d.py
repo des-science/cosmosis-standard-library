@@ -199,7 +199,11 @@ class WeylPower3D(Power3D):
     source_specific = False
 
 class WeylMatterPower3D(Power3D):
-    section = "weyl_curvature_matter_power_nl"
+    # SJ edit
+    # now for the cross, use the combination of two spectra as name
+    # matter_power x weyl_curvature_power
+    #section = "weyl_curvature_matter_power_nl"
+    section = "matter_power_weyl_curvature_power_nl"
     source_specific = True
     
 class MatterwIntrinsicPower3D(Power3D):
