@@ -111,7 +111,6 @@ def execute(block, config):
                     block["galaxy_shear_cl", bin_ij] += (
                         block["magnification_intrinsic_cl", bin_ij]
                         )
-
     if do_galaxy_cmbkappa:
         for i in range(nbin_pos):
             bin_i = 'bin_{0}_1'.format(i + 1)
@@ -119,5 +118,4 @@ def execute(block, config):
             block["galaxy_cmbkappa_cl", bin_i] += (
                 block["magnification_cmbkappa_cl", bin_i]
                 )
-                    
     return 0
