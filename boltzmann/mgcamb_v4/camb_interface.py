@@ -743,7 +743,7 @@ def save_matter_power(r, p, block, more_config):
     k = np.logspace(np.log10(more_config['kmin']), np.log10(kmax_power), more_config['nk'])
     #z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
     if more_config['cosmopower'] == True:
-        z = np.array([block.get_double("cosmopower_training", 'z', default=0.0)])
+        z = np.array([block.get_double("cosmopower_training", 'z')])
     else:
         z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
 
