@@ -83,6 +83,9 @@ def setup(options):
     # but use ourselves in some other way
     more_config = {}
 
+    # SJ edit
+    more_config["cosmopower"] = options.get_bool(opt, 'cosmopower', default=False)
+
     more_config["mode"] = mode
     more_config["max_printed_errors"] = options.get_int(opt, 'max_printed_errors', default=20)
     more_config["n_printed_errors"] = 0
@@ -738,7 +741,11 @@ def save_matter_power(r, p, block, more_config):
     # of these
     kmax_power = max(more_config['kmax'], more_config['kmax_extrapolate'])
     k = np.logspace(np.log10(more_config['kmin']), np.log10(kmax_power), more_config['nk'])
-    z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
+    #z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
+    if more_config['cosmopower'] == True:
+        z = np.array([block.get_double("cosmopower_training", 'z', default=0.0)])
+    else:
+        z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
 
     P_tot = None
 
@@ -800,6 +807,8 @@ def save_matter_power(r, p, block, more_config):
     # copied from old mgcamb interface. Linder-gamma cannot produce the same D(z) with GR
     # with the new D function 
     D = sigma_8 / sigma_8[0]
+    # SJ edit
+    if more_config['cosmopower'] == True: D = np.array([D])
     f = fsigma_8 / sigma_8
     
     # Save growth rates and sigma_8
@@ -896,7 +905,7 @@ def execute(block, config):
         else:
             # other modes
             r = mgcamb.get_results(p)
-    except camb.CAMBError:
+    except mgcamb.CAMBError:
         if more_config["n_printed_errors"] <= more_config["max_printed_errors"]:
             print("CAMB error caught: for these parameters")
             print(p)
