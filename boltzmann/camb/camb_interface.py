@@ -356,7 +356,7 @@ def extract_camb_params(block, config, more_config):
 
     # Get optional parameters from datablock.
     cosmology_params = get_optional_params(block, cosmo, 
-        ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos",
+        ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos", "meffsterile", 
          ("A_lens", "Alens")])
 
     if block.has_value(cosmo, "massless_nu"):
