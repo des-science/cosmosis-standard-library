@@ -24,7 +24,6 @@ class DESY5SNLikelihood(GaussianLikelihood):
     x_section = names.distances
     x_name = "z"
     y_section = names.distances
-    #y_name = "mu"
     y_name = "D_A"
     like_name = "desy5sn"
 
@@ -55,14 +54,13 @@ class DESY5SNLikelihood(GaussianLikelihood):
 
         # DES Y5 SN data provides distance modulus, so we need to convert it to the apparent magnitude first 
         # magnitude obtained by subtracting the absolute magnitude from the distance modulus
-        self.m_obs = self.mu_obs + M_fid
-        # Constant substraction (F_fid) doesn't affect error (true?) so we use mu observational err as mag_obs_err 
-        self.mag_obs_err = data['MUERR'][self.ww]
+        #self.m_obs = self.mu_obs + M0  #(M0: best fit absolute magnitude for each SN)
+        self.mu_obs_err = data['MUERR'][self.ww]
 
         # Return this to the parent class, which will use it
         # when working out the likelihood
         print(f"Found {len(self.zCMB)} DES SN 5 supernovae (or bins if you used the binned data file)")
-        return self.zCMB, self.m_obs
+        return self.zCMB, self.mu_obs
 
     def build_covariance(self):
         """Run once at the start to build the covariance matrix for the data"""
@@ -84,7 +82,7 @@ class DESY5SNLikelihood(GaussianLikelihood):
 
         # Now add in the statistical error to the diagonal
         for i in range(n):
-            C[i,i] += self.mag_obs_err[i]**2
+            C[i,i] += self.mu_obs_err[i]**2
         f.close()
 
         # Return the covariance; the parent class knows to invert this
@@ -112,11 +110,16 @@ class DESY5SNLikelihood(GaussianLikelihood):
         
         zcmb = self.zCMB
         zhel = self.zHEL
-        theory_ynew = 5.0*np.log10((1.0+zcmb)*(1.0+zhel)*np.atleast_1d(f(zcmb)))+25.
+
+        # distance modulus
+        theory_ynew = 5.0*np.log10((1.0+zcmb)*(1.0+zhel)*np.atleast_1d(f(zcmb))) +25.
 
         # Add the absolute supernova magnitude and return
-        M = block[names.supernova_params, "M"]
-        return theory_ynew + M
+        # SJ: absolute magnitude marginalization is not required
+        # in DES Y5 SN when only DES SN is used (M0 error included in cov). 
+        # But when combined with Pantheon and shoes, should be. Should confirm with SN experts
+        #M = block[names.supernova_params, "M"]
+        return theory_ynew #+ M
 
 
 # This takes our class and turns it into 
