@@ -61,7 +61,7 @@ def setup(options):
         beam_fwhm_arcmin = options[option_section, "beam_fwhm_arcmin"]
         # radians
         beam_sigma = (1./np.sqrt(8.*np.log(2.)))*np.radians(beam_fwhm_arcmin/60.)
-    else:
+    else: 
         raise ValueError("No beam_sigma_arcmin or beam_fwhm_armcin supplied!")
 
 

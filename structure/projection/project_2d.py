@@ -195,7 +195,20 @@ class GalaxyIntrinsicPower3D(Power3D):
 
 class WeylPower3D(Power3D):
     section = "weyl_curvature_power_nl"
+    lin_section = "weyl_curvature_power_lin"
     source_specific = False
+
+class WeylMatterPower3D(Power3D):
+    # SJ edit
+    # now for the cross, use the combination of two spectra as name
+    # matter_power x weyl_curvature_power
+    #section = "weyl_curvature_matter_power_nl"
+    section = "matter_power_weyl_curvature_power_nl"
+    source_specific = True
+    
+class MatterwIntrinsicPower3D(Power3D):
+    section = "matterw_intrinsic_power"
+    source_specific = True
 
 class MatterPower3DPPF(Power3D):
     section = "matter_power_nl"
@@ -220,7 +233,9 @@ def get_lensing_prefactor(block):
 
 def get_lensing_weyl_prefactor(block):
     h = block[names.cosmological_parameters, "h0"]
-    shear_weyl_scaling = 1.0 / h**2
+    #shear_weyl_scaling = 1.0 / h**2
+    # SJ: weyl power spectrum has negative sign.. 
+    shear_weyl_scaling = -1.0 / h**2
     return shear_weyl_scaling
 
 class Spectrum(object):
@@ -294,6 +309,9 @@ class Spectrum(object):
         elif self.prefactor_type[0]=="mag":
             prefactor *= self.get_magnification_prefactor(block,
                 self.sample_a, bin1) * self.source.lensing_prefactor
+        elif self.prefactor_type[0]=="mag_weyl":
+            prefactor *= self.get_magnification_prefactor(block,
+                self.sample_a, bin1) * self.source.lensing_weyl_prefactor
 
         # second prefactor
         if self.prefactor_type[1] is None:
@@ -305,6 +323,9 @@ class Spectrum(object):
         elif self.prefactor_type[1]=="mag":
             prefactor *= self.get_magnification_prefactor(block,
                 self.sample_b, bin2) * self.source.lensing_prefactor
+        elif self.prefactor_type[1]=="mag_weyl":
+            prefactor *= self.get_magnification_prefactor(block,
+                self.sample_a, bin2) * self.source.lensing_weyl_prefactor
 
         return prefactor
 
@@ -963,6 +984,15 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", None)
         has_rsd = False
 
+    class WeylIntrinsic(Spectrum):
+        power_3d_type = MatterwIntrinsicPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "N")
+        autocorrelation = False
+        name = names.shear_cl_gi
+        prefactor_type = ("lensing_weyl", None)
+        has_rsd = False
+
     class IntrinsicIntrinsic(Spectrum):
         power_3d_type = IntrinsicPower3D
         kernel_types = ("N", "N")
@@ -1003,6 +1033,15 @@ class SpectrumType(Enum):
         prefactor_type = ("mag", "mag")
         has_rsd = False
 
+    class MagnificationwMagnificationw(Spectrum):
+        power_3d_type = WeylPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "W_W")
+        autocorrelation = True
+        name = "magnification_cl"
+        prefactor_type = ("mag_weyl", "mag_weyl")
+        has_rsd = False
+
     class PositionShear(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("N", "W")
@@ -1011,6 +1050,14 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
+    class PositionWeyl(Spectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "W_W")
+        autocorrelation = False
+        name = "galaxy_shear_cl"
+        prefactor_type = (None, "lensing_weyl")
+        has_rsd = False
     class DensityIntrinsic(Spectrum):
         power_3d_type = MatterIntrinsicPower3D
         kernel_types = ("N", "N")
@@ -1027,6 +1074,15 @@ class SpectrumType(Enum):
         prefactor_type = ("mag", None)
         has_rsd = False
 
+    class MagnificationwIntrinsic(Spectrum):
+        power_3d_type = MatterwIntrinsicPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "N")
+        autocorrelation = False
+        name = "magnification_intrinsic_cl"
+        prefactor_type = ("mag_weyl", None)
+        has_rsd = False
+
     class MagnificationShear(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("W", "W")
@@ -1035,12 +1091,30 @@ class SpectrumType(Enum):
         prefactor_type = ("mag", "lensing")
         has_rsd = False
 
+    class MagnificationwWeyl(Spectrum):
+        power_3d_type = WeylPower3D
+        bias_correction_factors = 0
+        kernel_types = ("W_W", "W_W")
+        autocorrelation = False
+        name = "magnification_shear_cl"
+        prefactor_type = ("mag_weyl", "lensing_weyl")
+        has_rsd = False
+
     class ShearCmbkappa(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("W", "K")
         autocorrelation = False
         name = "shear_cmbkappa_cl"
         prefactor_type = ("lensing", "lensing")
+        has_rsd = False
+    
+    # SJ edit
+    class WeylCmbkappaw(Spectrum):
+        power_3d_type = WeylPower3D
+        kernel_types = ("W_W", "K_W")
+        autocorrelation = False
+        name = "shear_cmbkappa_cl"
+        prefactor_type = ("lensing_weyl", "lensing_weyl")
         has_rsd = False
 
     class CmbkappaCmbkappa(Spectrum):
@@ -1051,12 +1125,30 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", "lensing")
         has_rsd = False
 
+    # SJ edit
+    class CmbkappawCmbkappaw(Spectrum):
+        power_3d_type = WeylPower3D
+        kernel_types = ("K_W", "K_W")
+        autocorrelation = True
+        name = "cmbkappa_cl"
+        prefactor_type = ("lensing_weyl", "lensing_weyl")
+        has_rsd = False
+
     class IntrinsicCmbkappa(Spectrum):
         power_3d_type = MatterIntrinsicPower3D
         kernel_types = ("N", "K")
         autocorrelation = False
         name = "intrinsic_cmbkappa_cl"
         prefactor_type = (None, "lensing")
+        has_rsd = False
+
+    # SJ edit
+    class IntrinsicCmbkappaw(Spectrum):
+        power_3d_type = MatterwIntrinsicPower3D
+        kernel_types = ("N", "K_W")
+        autocorrelation = False
+        name = "intrinsic_cmbkappa_cl"
+        prefactor_type = (None, "lensing_weyl")
         has_rsd = False
 
     class LingalCmbkappa(LingalLensingSpectrum):
@@ -1067,12 +1159,31 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
+    # SJ edit
+    class LingalCmbkappaw(LingalLensingSpectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "K_W")
+        autocorrelation = False
+        name = "galaxy_cmbkappa_cl"
+        prefactor_type = (None, "lensing_weyl")
+        has_rsd = False
+        
     class MagnificationCmbkappa(Spectrum):
         power_3d_type = MatterPower3D
         kernel_types = ("W", "K")
         autocorrelation = False
         name = "magnification_cmbkappa_cl"
         prefactor_type = ("mag", "lensing")
+        has_rsd = False
+
+    # SJ edit
+    class MagnificationwCmbkappaw(Spectrum):
+        power_3d_type = WeylPower3D
+        kernel_types = ("W_W", "K_W")
+        autocorrelation = False
+        name = "magnification_cmbkappa_cl"
+        prefactor_type = ("mag_weyl", "lensing_weyl")
         has_rsd = False
 
     class DensityCmbkappa(Spectrum):
@@ -1130,6 +1241,15 @@ class SpectrumType(Enum):
         prefactor_type = (None, "lensing")
         has_rsd = False
 
+    class LingalWeyl(LingalLensingSpectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "W_W")
+        autocorrelation = False
+        name = "galaxy_shear_cl"
+        prefactor_type = (None, "lensing_weyl")
+        has_rsd = False
+
     class LingalMagnification(LingalLensingSpectrum):
         autocorrelation = False
         power_3d_type = MatterPower3D
@@ -1137,6 +1257,15 @@ class SpectrumType(Enum):
         autocorrelation = False
         name = "galaxy_magnification_cl"
         prefactor_type = (None, "mag")
+        has_rsd = False
+
+    class LingalMagnificationw(LingalLensingSpectrum):
+        power_3d_type = WeylMatterPower3D
+        bias_correction_factors = 1
+        kernel_types = ("N", "W_W")
+        autocorrelation = False
+        name = "galaxy_magnification_cl"
+        prefactor_type = (None, "mag_weyl")
         has_rsd = False
 
     class LingalIntrinsic(LingalLensingSpectrum):
@@ -1388,7 +1517,6 @@ class SpectrumCalculator(object):
 
                     # power_key is the power_3d class and suffix
                     power_key = (spectrum.power_3d_type, power_suffix)
-
                     # The self in the line below is not a mistake - the source objects
                     # for the spectrum class is the SpectrumCalculator itself
                     s = spectrum(self, sample_name_a, sample_name_b, power_key, save_name)
@@ -1468,7 +1596,7 @@ class SpectrumCalculator(object):
         # self.kernels dictionary.
         for key in self.req_kernel_keys:
             kernel_type, sample_name = key
-
+            
             # For all the sources we need the n(z)
             if (sample_name not in self.kernels) and (sample_name != 'cmb'):
                 section_name = "nz_"+sample_name
@@ -1497,6 +1625,13 @@ class SpectrumCalculator(object):
                 self.kernels[sample_name].set_wwofchi_splines(self.chi_of_z,
                     self.dchidz, self.a_of_chi, clip=self.clip_chi_kernels,
                     dchi=self.shear_kernel_dchi)
+
+            elif kernel_type == 'K_W' and sample_name == 'cmb':
+                # SJ edit: this is actually same with 'K'. 
+                # but for the consistency with W_W, I keep it
+                chi_star = block['distances','chistar']
+                h0 = block[names.cosmological_parameters, "h0"]
+                self.kernels[sample_name].set_cmblensing_splines(self.chi_of_z, self.a_of_chi, chi_star*h0, clip = self.clip_chi_kernels)
 
             elif kernel_type == "F":
                 # This is the combined shear and IA kernel. We need to calculate
@@ -1554,7 +1689,6 @@ class SpectrumCalculator(object):
 
 
     def compute_spectrum(self, block, spectrum):
-
         # Save some naming about the spectrum
         sep_name = "ell"
         block[spectrum.section_name, "save_name"] = spectrum.save_name

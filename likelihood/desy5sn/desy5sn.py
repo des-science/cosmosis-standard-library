@@ -29,6 +29,7 @@ def cov_log_likelihood(mu_model, mu, inv_cov):
     chi2 = chit2 - (B**2 / C) + np.log(C / (2* np.pi))
     return -0.5*chi2
 
+
 class DESY5SNLikelihood(GaussianLikelihood):
     x_section = names.distances
     x_name = "z"
@@ -195,7 +196,6 @@ class DESY5SNLikelihood(GaussianLikelihood):
                 self.chol = np.linalg.cholesky(self.cov)
             sim = self.simulate_data_vector(x)
             block[names.data_vector, self.like_name + "_simulation"] = sim
-
 
 
 # This takes our class and turns it into 

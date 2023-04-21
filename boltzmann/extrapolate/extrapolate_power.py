@@ -29,8 +29,7 @@ def linear_extend(x, y, xmin, xmax, nmin, nmax, nfit):
         x = np.concatenate((x, xnew))
         y = np.concatenate((y, ynew))
     return x, y
-
-
+    
 def extrapolate_section(block, section, kmin, kmax, nmin, nmax, npoint, key):
     # load current values
     k = block[section, "k_h"]
@@ -39,17 +38,23 @@ def extrapolate_section(block, section, kmin, kmax, nmin, nmax, npoint, key):
     nz = len(z)
     # load other current values
     k, z, P = block.get_grid(section, "k_h", "z", key)
+
+    # SJ: for weyl x matter, reverse the sign and extrapolate, and put back the sign
     # extrapolate
     P_out = []
     for i in range(nz):
         Pi = P[:, i]
+        if section in ['weyl_curvature_matter_power_lin']:
+            Pi = np.abs(Pi)
         logk, logp = linear_extend(log(k), log(Pi), log(
             kmin), log(kmax), nmin, nmax, npoint)
-        P_out.append(exp(logp))
+        if section in ['weyl_curvature_matter_power_lin']:
+            P_out.append(-exp(logp))
+        else:
+            P_out.append(exp(logp))
 
     k = exp(logk)
     P_out = np.dstack(P_out).squeeze()
-
     block.replace_grid(section, "z", z, "k_h", k, key, P_out.T)
 
 

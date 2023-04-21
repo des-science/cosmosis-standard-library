@@ -5,14 +5,20 @@ from scipy.interpolate import InterpolatedUnivariateSpline
 import warnings
 import traceback
 
-# Finally we can now import camb
-import camb
-from camb.dark_energy import DarkEnergyModel
-from camb.baseconfig import F2003Class
+#import ipdb
+#ipdb.set_trace()
+
+# Finally we can now import mgcamb
+#import sys
+#sys.path.append('/global/u2/s/sjlee88/cosmosis-global-env/lib/python3.9/site-packages/camb-1.3.6-py3.9.egg/')
+import mgcamb 
+from mgcamb.dark_energy import DarkEnergyModel
+from mgcamb.baseconfig import F2003Class
 
 import pdb
 
 cosmo = names.cosmological_parameters
+modified_gravity = "modified_gravity"
 
 MODE_BG = "background"
 MODE_THERM = "thermal"
@@ -36,6 +42,8 @@ matter_power_section_names = {
     'v_newtonian_cdm': 'cdm_velocity_power',
     'v_newtonian_baryon': 'baryon_velocity_power',
     'v_baryon_cdm': 'baryon_cdm_relative_velocity_power',
+    # SJ edit
+    #'weyl_matter':'weyl_curvature_matter_power'
 }
 
 
@@ -60,7 +68,7 @@ def get_optional_params(block, section, names):
 def get_choice(options, name, valid, default=None, prefix=''):
     choice = options.get_string(opt, name, default=default)
     if choice not in valid:
-        raise ValueError("Parameter setting '{}' in camb must be one of: {}.  You tried: {}".format(name, valid, choice))
+        raise ValueError("Parameter setting '{}' in mgcamb must be one of: {}.  You tried: {}".format(name, valid, choice))
     return prefix + choice
 
 def setup(options):
@@ -99,10 +107,11 @@ def setup(options):
     config['want_zdrag'] = mode != MODE_BG
     config['want_zstar'] = config['want_zdrag']
 
-    more_config['want_chistar'] = options.get_bool(opt, 'want_chistar', default=True)
+    # SJ edit : for 6x2pt 
+    more_config['want_chistar'] = options.get_bool(opt, 'want_chistar', default=False)
     more_config['n_logz'] = options.get_int(opt, 'n_logz', default=0)
     more_config['zmax_logz'] = options.get_double(opt, 'zmax_logz', default = 1100.)
-    
+
     more_config["lmax_params"] = get_optional_params(options, opt, ["max_eta_k", "lens_potential_accuracy",
                                                                     "lens_margin", "k_eta_fac", "lens_k_eta_reference",
                                                                     #"min_l", "max_l_tensor", "Log_lvalues", , "max_eta_k_tensor"
@@ -115,7 +124,7 @@ def setup(options):
     more_config["cosmology_params"] = get_optional_params(options, opt, ["neutrino_hierarchy" ,"theta_H0_range"])
 
     if 'theta_H0_range' in more_config['cosmology_params']:
-        more_config['cosmology_params']['theta_H0_range'] = [float(x) for x in more_config['cosmology_params']['theta_H0_range'].split()]
+        more_config['cosmology_params'] = [float(x) for x in more_config['cosmology_params']['theta_H0_range'].split()]
 
     more_config['do_reionization'] = options.get_bool(opt, 'do_reionization', default=True)
     more_config['use_optical_depth'] = options.get_bool(opt, 'use_optical_depth', default=True)
@@ -133,7 +142,7 @@ def setup(options):
     more_config["nonlinear_params"] = get_optional_params(options, opt, ["halofit_version", "Min_kh_nonlinear"])
 
     halofit_version = more_config['nonlinear_params'].get('halofit_version')
-    known_halofit_versions = list(camb.nonlinear.halofit_version_names.keys()) + [None]
+    known_halofit_versions = list(mgcamb.nonlinear.halofit_version_names.keys()) + [None]
     if halofit_version not in known_halofit_versions:
         raise ValueError("halofit_version must be one of : {}.  You put: {}".format(known_halofit_versions, halofit_version))
 
@@ -176,16 +185,27 @@ def setup(options):
         raise ValueError("""These matter power types are not known: {}.
 Please use any these (separated by spaces): {}""".format(bad_power, good_power))
 
-    camb.set_feedback_level(level=options.get_int(opt, "feedback", default=0))
+    # MGCAMB modified gravity flags 
+    more_config['modified_gravity_params'] = {}
+    mgconfig = more_config['modified_gravity_params']
+    mgconfig['MG_flag'] = options.get_int(opt, "mg_flag", default=0)
+    mgconfig['DE_model'] = options.get_int(opt, "DE_model", default=0)
+    mgconfig['pure_MG_flag'] = options.get_int(opt, "pure_mg_flag", default=0)
+    mgconfig['mugamma_par'] = options.get_int(opt, "mugamma_par", default=0)
+    mgconfig['musigma_par'] = options.get_int(opt, "musigma_par", default=0)
+    mgconfig['QR_par'] = options.get_int(opt, "QR_par", default=0)
+    mgconfig['alt_MG_flag'] = options.get_int(opt, "alt_MG_flag", default=0)
+
+    #ipdb.set_trace()
+
+    mgcamb.set_feedback_level(level=options.get_int(opt, "feedback", default=0))
     return [config, more_config]
-
-
 
 # The extract functions convert from the block to camb parameters
 # during the execute function
 
 def extract_recombination_params(block, config, more_config):
-    default_recomb = camb.recombination.Recfast()
+    default_recomb = mgcamb.recombination.Recfast()
  
     min_a_evolve_Tm = block.get_double('recfast', 'min_a_evolve_Tm', default=default_recomb.min_a_evolve_Tm)
     RECFAST_fudge = block.get_double('recfast', 'RECFAST_fudge', default=default_recomb.RECFAST_fudge)
@@ -199,7 +219,7 @@ def extract_recombination_params(block, config, more_config):
     wGauss1 = block.get_double('recfast', 'wGauss1', default=default_recomb.wGauss1)
     wGauss2 = block.get_double('recfast', 'wGauss2', default=default_recomb.wGauss2)
     
-    recomb = camb.recombination.Recfast(
+    recomb = mgcamb.recombination.Recfast(
         min_a_evolve_Tm = min_a_evolve_Tm, 
         RECFAST_fudge = RECFAST_fudge, 
         RECFAST_fudge_He = RECFAST_fudge_He, 
@@ -218,17 +238,17 @@ def extract_recombination_params(block, config, more_config):
     return recomb
 
 def extract_reionization_params(block, config, more_config):
-    reion = camb.reionization.TanhReionization()
+    reion = mgcamb.reionization.TanhReionization()
     if more_config["do_reionization"]:
         if more_config['use_optical_depth']:
             tau = block[cosmo, 'tau']
-            reion = camb.reionization.TanhReionization(use_optical_depth=True, optical_depth=tau)
+            reion = mgcamb.reionization.TanhReionization(use_optical_depth=True, optical_depth=tau)
         else:
             sec = 'reionization'
             redshift = block[sec, 'redshift']
             delta_redshift = block[sec, 'delta_redshift']
             reion_params = get_optional_params(block, sec, ["fraction", "helium_redshift", "helium_delta_redshift", "helium_redshiftstart"])
-            reion = camb.reionization.TanhReionization(
+            reion = mgcamb.reionization.TanhReionization(
                 use_optical_depth=False,
                 redshift = redshift,
                 delta_redshift = delta_redshift,
@@ -237,7 +257,7 @@ def extract_reionization_params(block, config, more_config):
                 **more_config["reionization_params"],
             )
     else:
-        reion = camb.reionization.TanhReionization()
+        reion = mgcamb.reionization.TanhReionization()
         reion.Reionization = False
     return reion
 
@@ -284,7 +304,7 @@ def extract_initial_power_params(block, config, more_config):
     optional_param_names = ["nrun", "nrunrun", "nt", "ntrun", "r"]
     optional_params = get_optional_params(block, cosmo, optional_param_names)
 
-    init_power = camb.InitialPowerLaw()
+    init_power = mgcamb.InitialPowerLaw()
     init_power.set_params(
         ns = block[cosmo, 'n_s'],
         As = block[cosmo, 'A_s'],
@@ -306,10 +326,196 @@ def extract_nonlinear_params(block, config, more_config):
     else:
         hmcode_params = {}
 
-    return camb.nonlinear.Halofit(
+    return mgcamb.nonlinear.Halofit(
         **more_config["nonlinear_params"],
         **hmcode_params
     )
+
+# SJ edit: new function to read mg params 
+# Only validated for sig-mu and Linder_gamma.
+def extract_modified_gravity_params(block, config, more_config):
+
+    mgconfig = more_config['modified_gravity_params']  
+
+    if mgconfig['MG_flag'] == 0: 
+        return 0 
+    else: 
+        GRtrans = block.get_double(modified_gravity, 'gr_trans')
+        # Dark Energy Model (wCDM, w0waCDM, user defined)
+        if mgconfig['MG_flag'] == 1: 
+            if mgconfig['DE_model'] == 0: pass
+            elif mgconfig['DE_model'] == 1: # read wo
+                mgconfig['w0DE'] = block.get_double(modified_gravity, 'w0DE')
+            elif mgconfig['DE_model'] == 2: # read wowa
+                mgconfig['w0DE'] = block.get_double(modified_gravity, 'w0DE')
+                mgconfig['waDE'] = block.get_double(modified_gravity, 'waDE')
+            elif mgconfig['DE_model'] == 3: # reconstruction of w
+                # Omega_x bins
+                mgconfig['Funcofw_1']  = block.get_double(modified_gravity, 'OmegaX_idx_1' , default=0.7)
+                mgconfig['Funcofw_2']  = block.get_double(modified_gravity, 'OmegaX_idx_2' , default=0.7)
+                mgconfig['Funcofw_3']  = block.get_double(modified_gravity, 'OmegaX_idx_3' , default=0.7)
+                mgconfig['Funcofw_4']  = block.get_double(modified_gravity, 'OmegaX_idx_4' , default=0.7)
+                mgconfig['Funcofw_5']  = block.get_double(modified_gravity, 'OmegaX_idx_5' , default=0.7)
+                mgconfig['Funcofw_6']  = block.get_double(modified_gravity, 'OmegaX_idx_6' , default=0.7)
+                mgconfig['Funcofw_7']  = block.get_double(modified_gravity, 'OmegaX_idx_7' , default=0.7)
+                mgconfig['Funcofw_8']  = block.get_double(modified_gravity, 'OmegaX_idx_8' , default=0.7)
+                mgconfig['Funcofw_9']  = block.get_double(modified_gravity, 'OmegaX_idx_9' , default=0.7)
+                mgconfig['Funcofw_10'] = block.get_double(modified_gravity, 'OmegaX_idx_10', default=0.7)
+                mgconfig['Funcofw_11'] = block.get_double(modified_gravity, 'OmegaX_idx_11', default=0.7)
+
+            if mgconfig['pure_MG_flag'] == 0:
+                print ( "Please set pure_MG_flag when setting MG_flag to 1")
+                print ( "   pure_MG_flag = 1 : mu, gamma parametrization")
+                print ( "   pure_MG_flag = 2 : mu, sigma parametrization")
+                print ( "   pure_MG_flag = 3 : Q, R  parametrization")
+                exit(1)
+            # mugamma model 
+            if mgconfig['pure_MG_flag'] == 1:
+                if mgconfig['mugamma_par'] == 0:
+                    print ( "Please set mugamma_par when setting pure_MG_flag to 1")
+                    print ( "   mugamma_par = 1 : BZ parametrization ( introduced in arXiv:0809.3791 )")
+                    print ( "   mugamma_par = 2 : Planck parametrization")
+                    exit(1)
+                if mgconfig['mugamma_par'] == 1:
+                    mgconfig['B1'] = block.get_double(modified_gravity, 'b1')
+                    mgconfig['B2'] = block.get_double(modified_gravity, 'b2')
+                    mgconfig['lambda1_2'] = block.get_double(modified_gravity, 'lambda1_2')
+                    mgconfig['lambda2_2'] = block.get_double(modified_gravity, 'lambda2_2')
+                    mgconfig['ss'] = block.get_double(modified_gravity, 'ss')
+                    
+                elif mgconfig['mugamma_par'] == 2:
+                    mgconfig['E11'] = block.get_double(modified_gravity, 'E11')
+                    mgconfig['E22'] = block.get_double(modified_gravity, 'E22')
+                    # read e11, e22 
+            # musigma model
+            elif mgconfig['pure_MG_flag'] == 2:
+                if mgconfig['musigma_par'] == 0:
+                    print ( "Please set musigma_par when setting pure_MG_flag to 2")
+                    print ( "   musigma_par = 1 : Omega_L parametrization")
+                    print ( "   musigma_par = 2 : a^s parametrization")
+                    print ( "   musigma_par = 3 : (a,k) parametrization")
+                    exit(1)
+                elif mgconfig['musigma_par'] == 1:
+                    mgconfig['mu0'] = block.get_double(modified_gravity, 'mu0')
+                    mgconfig['sigma0'] = block.get_double(modified_gravity, 'sigma0')
+                    #modified_gravity.set_params(mu0=mu0, sigma0=sigma0)
+                elif mgconfig['musigma_par'] == 2:
+                    mgconfig['mu0_s'] = block.get_double(modified_gravity, 'mu0_s')
+                    mgconfig['sigma0_s'] = block.get_double(modified_gravity, 'sigma0_s')
+                    mgconfig['mg_s'] = block.get_double(modified_gravity, 'mg_s')
+                    #modified_gravity.set_params(mu0=mu0_s, sigma0=sigma0_s,mg_s=mg_s)
+                elif mgconfig['musigma_par'] == 3:
+                    mgconfig['mu0_s'] = block.get_double(modified_gravity, 'mu0_s')
+                    mgconfig['sigma0_s'] = block.get_double(modified_gravity, 'sigma0_s')
+                    mgconfig['m_Mu'] = block.get_double(modified_gravity, 'm_Mu')
+                    mgconfig['m_Sigma'] = block.get_double(modified_gravity, 'm_Sigma')
+                    #modified_gravity.set_params(mu0=mu0_s, sigma0=sigma0_s,m_Mu=m_Mu, m_Sigma=m_Sigma)
+            # QR model 
+            elif mgconfig['pure_MG_flag'] == 3:
+                if mgconfig['QR_par'] == 0:
+                    print ( "Please set qr_par when setting pure_MG_flag to 3")
+                    print ( "   QR_par = 1 : (Q,R) 		( introduced in arXiv:1002.4197 )")
+                    print ( "   QR_par = 2 : (Q0,R0,s)	( introduced in arXiv:1002.4197 )")
+                    exit(1)
+                elif mgconfig['QR_par'] == 1:
+                    mgconfig['MGQfix'] = block.get_double(modified_gravity, 'MGQfix')
+                    mgconfig['MGRfix'] = block.get_double(modified_gravity, 'MGRfix')
+                    #modified_gravity.set_params(MGQfix=MGQfix, MGRfix=MGRfix) 
+                elif mgconfig['QR_par'] == 2:
+                    mgconfig['Qnot'] = block.get_double(modified_gravity, 'Qnot')
+                    mgconfig['Rnot'] = block.get_double(modified_gravity, 'Rnot')
+                    mgconfig['sss'] = block.get_double(modified_gravity, 'sss')
+                    #modified_gravity.set_params(Qnot=Qnot, Rnot=Rnot,sss=sss) 
+
+        elif mgconfig['MG_flag'] == 2:
+            if mgconfig['alt_MG_flag'] == 0: 
+                print ( "Please set alt_MG_flag when setting MG_flag to 2")
+                print ( "   alt_MG_flag = 1 : Linder Gamma parametrization ( introduced in arXiv:0507263 )")
+                exit(1)
+            # Linder Gamma
+            elif mgconfig['alt_MG_flag'] == 1:    
+                mgconfig['Linder_gamma'] = block.get_double(modified_gravity, 'Linder_gamma')
+
+        elif mgconfig['MG_flag'] == 3:
+            if mgconfig['QSA_flag'] == 0: 
+                print ("Please set qsa_flag when setting mg_flag to 3")
+                print ("    QSA_flag = 1 : f(R)")
+                print ("    QSA_flag = 2 : Symmetron")
+                print ("    QSA_flag = 3 : Dilaton")
+                print ("    QSA_flag = 4 : Hu-Sawicki f(R)")
+                exit(1)
+            elif mgconfig['QSA_flag'] == 1: 
+                mgconfig['B1'] = 4./3.
+                mgconfig['lambda1_2'] = block.get_double(modified_gravity, 'B0')
+                mgconfig['B2'] = 0.5
+                mgconfig['ss'] = 4.0
+
+            elif mgconfig['QSA_flag'] == 2: 
+                mgconfig['beta_star'] = block.get_double(modified_gravity, 'beta_star')
+                mgconfig['a_star'] = block.get_double(modified_gravity, 'a_star')
+                mgconfig['xi_star'] = block.get_double(modified_gravity, 'xi_star')
+                mgconfig['GRtrans'] = mgconfig['a_star']
+            elif mgconfig['QSA_flag'] == 3:
+                mgconfig['beta0'] = block.get_double(modified_gravity, 'beta0')
+                mgconfig['xi0'] = block.get_double(modified_gravity, 'xi0')
+                mgconfig['DilS'] = block.get_double(modified_gravity, 'DilS')
+                mgconfig['DilR'] = block.get_double(modified_gravity, 'DilR')
+            elif mgconfig['QSA_flag'] == 4:
+                mgconfig['F_R0'] = block.get_double(modified_gravity, 'F_R0')
+                mgconfig['FRn'] = block.get_double(modified_gravity, 'FRn')
+                mgconfig['beta0'] = 1/np.sqrt(6.0)
+
+        elif mgconfig['MG_flag'] == 4:
+            # CDM coupling model
+            print ("MG_flag = 4 is not implemented yet")
+            exit(1)
+
+        elif mgconfig['MG_flag'] == 5:
+            # direct mu-sigma parametrization
+            print ("MG_flag = 5 is not implemented yet")
+            exit(1)
+            
+        elif mgconfig['MG_flag'] == 6:
+            # reconstruction
+            print ('DE_model flag is set to 3')
+            mgconfig['DE_model'] = 3
+            #Mu bins
+            mgconfig['MGCAMB_Mu_idx_1']  = block.get_double(modified_gravity, 'Mu_idx_1' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_2']  = block.get_double(modified_gravity, 'Mu_idx_2' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_3']  = block.get_double(modified_gravity, 'Mu_idx_3' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_4']  = block.get_double(modified_gravity, 'Mu_idx_4' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_5']  = block.get_double(modified_gravity, 'Mu_idx_5' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_6']  = block.get_double(modified_gravity, 'Mu_idx_6' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_7']  = block.get_double(modified_gravity, 'Mu_idx_7' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_8']  = block.get_double(modified_gravity, 'Mu_idx_8' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_9']  = block.get_double(modified_gravity, 'Mu_idx_9' , default=1.0)
+            mgconfig['MGCAMB_Mu_idx_10'] = block.get_double(modified_gravity, 'Mu_idx_10', default=1.0)
+            mgconfig['MGCAMB_Mu_idx_11'] = block.get_double(modified_gravity, 'Mu_idx_11', default=1.0)
+            # Sigma bins
+            mgconfig['MGCAMB_Sigma_idx_1']  = block.get_double(modified_gravity, 'Sigma_idx_1' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_2']  = block.get_double(modified_gravity, 'Sigma_idx_2' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_3']  = block.get_double(modified_gravity, 'Sigma_idx_3' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_4']  = block.get_double(modified_gravity, 'Sigma_idx_4' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_5']  = block.get_double(modified_gravity, 'Sigma_idx_5' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_6']  = block.get_double(modified_gravity, 'Sigma_idx_6' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_7']  = block.get_double(modified_gravity, 'Sigma_idx_7' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_8']  = block.get_double(modified_gravity, 'Sigma_idx_8' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_9']  = block.get_double(modified_gravity, 'Sigma_idx_9' , default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_10'] = block.get_double(modified_gravity, 'Sigma_idx_10', default=1.0)
+            mgconfig['MGCAMB_Sigma_idx_11'] = block.get_double(modified_gravity, 'Sigma_idx_11', default=1.0)
+            # Omega_x bins
+            mgconfig['Funcofw_1']  = block.get_double(modified_gravity, 'OmegaX_idx_1' , default=0.7)
+            mgconfig['Funcofw_2']  = block.get_double(modified_gravity, 'OmegaX_idx_2' , default=0.7)
+            mgconfig['Funcofw_3']  = block.get_double(modified_gravity, 'OmegaX_idx_3' , default=0.7)
+            mgconfig['Funcofw_4']  = block.get_double(modified_gravity, 'OmegaX_idx_4' , default=0.7)
+            mgconfig['Funcofw_5']  = block.get_double(modified_gravity, 'OmegaX_idx_5' , default=0.7)
+            mgconfig['Funcofw_6']  = block.get_double(modified_gravity, 'OmegaX_idx_6' , default=0.7)
+            mgconfig['Funcofw_7']  = block.get_double(modified_gravity, 'OmegaX_idx_7' , default=0.7)
+            mgconfig['Funcofw_8']  = block.get_double(modified_gravity, 'OmegaX_idx_8' , default=0.7)
+            mgconfig['Funcofw_9']  = block.get_double(modified_gravity, 'OmegaX_idx_9' , default=0.7)
+            mgconfig['Funcofw_10'] = block.get_double(modified_gravity, 'OmegaX_idx_10', default=0.7)
+            mgconfig['Funcofw_11'] = block.get_double(modified_gravity, 'OmegaX_idx_11', default=0.7)
+
 
 # We may reinstate these later depending on support in camb itself
 # def extract_accuracy_params(block, config, more_config):
@@ -351,6 +557,9 @@ def extract_camb_params(block, config, more_config):
 
     dark_energy = extract_dark_energy_params(block, config, more_config)
 
+    # SJ edit
+    # modified gravity params 
+    extract_modified_gravity_params(block, config, more_config)
 
     # Currently the camb.model.*Params classes default to 0 for attributes (https://github.com/cmbant/CAMB/issues/50),
     # so we're not using them.
@@ -359,7 +568,7 @@ def extract_camb_params(block, config, more_config):
 
     # Get optional parameters from datablock.
     cosmology_params = get_optional_params(block, cosmo, 
-        ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos", "meffsterile", 
+        ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos",
          ("A_lens", "Alens")])
 
     if block.has_value(cosmo, "massless_nu"):
@@ -385,7 +594,7 @@ def extract_camb_params(block, config, more_config):
         sigma8_to_As(block, config, more_config, cosmology_params, dark_energy, reion)
         init_power = extract_initial_power_params(block, config, more_config)
         
-    p = camb.CAMBparams(
+    p = mgcamb.CAMBparams(
         InitPower = init_power,
         Recomb = recomb,
         DarkEnergy = dark_energy,
@@ -394,6 +603,7 @@ def extract_camb_params(block, config, more_config):
         NonLinearModel=nonlinear,
         **config,
     )
+
     # Setting up neutrinos by hand is hard. We let CAMB deal with it instead.
     p.set_cosmology(ombh2 = block[cosmo, 'ombh2'],
                     omch2 = block[cosmo, 'omch2'],
@@ -413,6 +623,10 @@ def extract_camb_params(block, config, more_config):
     p.set_for_lmax(**more_config["lmax_params"])
     p.set_accuracy(**more_config["accuracy_params"])
 
+    # SJ edit
+    # setting MG parameters
+    p.set_mgparams(**more_config['modified_gravity_params'])
+    
     if want_perturbations:
         if "zmid" in more_config:
             z = np.concatenate((np.linspace(more_config['zmin'], 
@@ -477,51 +691,32 @@ def save_distances(r, p, block, more_config):
     #If desired, append logarithmically distributed redshifts
     log_z = np.geomspace(more_config["zmax_background"], more_config['zmax_logz'], num = more_config['n_logz'])
     z_background = np.append(z_background, log_z[1:])
-    
+
     # Write basic distances and related quantities to datablock
     block[names.distances, "nz"] = len(z_background)
     block[names.distances, "z"] = z_background
     block[names.distances, "a"] = 1/(z_background+1)
+    block[names.distances, "D_A"] = r.angular_diameter_distance(z_background)
+    block[names.distances, "D_M"] = r.comoving_radial_distance(z_background)
+    d_L = r.luminosity_distance(z_background)
+    block[names.distances, "D_L"] = d_L
 
-    D_C = r.comoving_radial_distance(z_background)
-    H = r.h_of_z(z_background)
-    D_H = 1 / H[0]
+    if more_config['want_chistar']:
+        chistar = (r.conformal_time(0)- r.tau_maxvis)
+        block[names.distances, "CHISTAR"] = chistar
 
-    if p.omk == 0:
-        D_M = D_C
-    elif p.omk < 0:
-        s = np.sqrt(-p.omk)
-        D_M = (D_H / s)  * np.sin(s * D_C / D_H)
-    else:
-        s = np.sqrt(p.omk)
-        D_M = (D_H / s) * np.sinh(s * D_C / D_H)
-
-    D_L = D_M * (1 + z_background)
-    D_A = D_M / (1 + z_background)
-    D_V = ((1 + z_background)**2 * z_background * D_A**2 / H)**(1./3.)
-    
     # Deal with mu(0), which is -np.inf
-    mu = np.zeros_like(D_L)
-    pos = D_L > 0
-    mu[pos] = 5*np.log10(D_L[pos])+25
+    mu = np.zeros_like(d_L)
+    pos = d_L > 0
+    mu[pos] = 5*np.log10(d_L[pos])+25
     mu[~pos] = -np.inf
-
-    block[names.distances, "D_C"] = D_C
-    block[names.distances, "D_M"] = D_M
-    block[names.distances, "D_L"] = D_L
-    block[names.distances, "D_A"] = D_A
-    block[names.distances, "D_V"] = D_V
-    block[names.distances, "H"] = H
     block[names.distances, "MU"] = mu
+    block[names.distances, "H"] = r.h_of_z(z_background)
 
     if more_config['do_bao']:
         rs_DV, _, _, F_AP = r.get_BAO(z_background, p).T
         block[names.distances, "rs_DV"] = rs_DV
         block[names.distances, "F_AP"] = F_AP
-
-    if more_config['want_chistar']:
-        chistar = (r.conformal_time(0)- r.tau_maxvis)
-        block[names.distances, "CHISTAR"] = chistar
 
 def compute_growth_factor(r, block, P_tot, k, z, more_config):
     if P_tot is None:
@@ -546,7 +741,7 @@ def save_matter_power(r, p, block, more_config):
     # of these
     kmax_power = max(more_config['kmax'], more_config['kmax_extrapolate'])
     k = np.logspace(np.log10(more_config['kmin']), np.log10(kmax_power), more_config['nk'])
-    # SJ edit 
+    #z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
     if more_config['cosmopower'] == True:
         z = np.array([block.get_double("cosmopower_training", 'z', default=0.0)])
     else:
@@ -554,46 +749,68 @@ def save_matter_power(r, p, block, more_config):
 
     P_tot = None
 
-    for transfer_type in more_config['power_spectra']:
-        # Deal with case consistency in Weyl option
-        tt = transfer_type if transfer_type != 'weyl' else 'Weyl'
+    # MR: calculate properly power cross-spectra
+    _num_power = len(more_config['power_spectra'])
 
-        # Get an interpolator.  By default bicubic if size is large enough,
-        # otherwise it drops down to linear.
-        # First we do the linear version of the spectrum
-        P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, var1=tt, var2=tt, return_z_k=True,
-                                        extrap_kmax=more_config['kmax_extrapolate'])
-        assert P.islog
-        # P.P evaluates at k instead of logk
-        p_k = P.P(z, k, grid=True)
+    for t1 in range(_num_power):
+        for t2 in range(t1, _num_power):
 
-        # Save this for the growth rate later
-        if transfer_type == 'delta_tot':
-            P_tot = P
+            transfer_type_1 = more_config['power_spectra'][t1]
+            transfer_type_2 = more_config['power_spectra'][t2]
 
-        # Save the linear
-        section_name = matter_power_section_names[transfer_type] + "_lin"
-        block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
+            # Deal with case consistency in Weyl option
+            transfer_type_1 = transfer_type_1 if transfer_type_1 != 'weyl' else 'Weyl'
+            transfer_type_2 = transfer_type_2 if transfer_type_2 != 'weyl' else 'Weyl'
 
-        # Now if requested we also save the linear version
-        if p.NonLinear is not camb.model.NonLinear_none:
-            # Exact same process as before
-            P = r.get_matter_power_interpolator(nonlinear=True, var1=tt, var2=tt,
-                                            extrap_kmax=more_config['kmax_extrapolate'])
+            # Get an interpolator.  By default bicubic if size is large enough,
+            # otherwise it drops down to linear.
+            # First we do the linear version of the spectrum
+            P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, 
+                                                              var1=transfer_type_1, 
+                                                              var2=transfer_type_2, 
+                                                              return_z_k=True,
+                                                              extrap_kmax=more_config['kmax_extrapolate'])
+            assert P.islog
+            # P.P evaluates at k instead of logk
             p_k = P.P(z, k, grid=True)
-            section_name = matter_power_section_names[transfer_type] + "_nl"
-            block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
+
+            # Save this for the growth rate later
+            if transfer_type_1 == 'delta_tot' and transfer_type_2 == 'delta_tot':
+                P_tot = P
+
+            # Save the linear
+            if transfer_type_1 == transfer_type_2:
+                section_name = matter_power_section_names[transfer_type_1.lower()] 
+            else:
+                section_name = matter_power_section_names[transfer_type_1.lower()] + '_' + matter_power_section_names[transfer_type_2.lower()]
+            
+            block.put_grid(section_name + "_lin", "z", z, "k_h", k, "p_k", p_k)
+
+            # Now if requested we also save the linear version
+            if p.NonLinear is not mgcamb.model.NonLinear_none:
+                # Exact same process as before
+                P = r.get_matter_power_interpolator(nonlinear=True, 
+                                                    var1=transfer_type_1, 
+                                                    var2=transfer_type_2, 
+                                                    extrap_kmax=more_config['kmax_extrapolate'])
+                p_k = P.P(z, k, grid=True)
+                block.put_grid(section_name + "_nl", "z", z, "k_h", k, "p_k", p_k)
+
 
     # Get growth rates and sigma_8
     sigma_8 = r.get_sigma8()[::-1]
     fsigma_8 = r.get_fsigma8()[::-1]
     rs_DV, H, DA, F_AP = r.get_BAO(z, p).T
 
-    D = compute_growth_factor(r, block, P_tot, k, z, more_config)
-    # SJ edit 
+    #D = compute_growth_factor(r, block, P_tot, k, z, more_config)
+    
+    # copied from old mgcamb interface. Linder-gamma cannot produce the same D(z) with GR
+    # with the new D function 
+    D = sigma_8 / sigma_8[0]
+    # SJ edit
     if more_config['cosmopower'] == True: D = np.array([D])
     f = fsigma_8 / sigma_8
-
+    
     # Save growth rates and sigma_8
     block[names.growth_parameters, "z"] = z
     block[names.growth_parameters, "a"] = 1/(1+z)
@@ -651,7 +868,7 @@ def sigma8_to_As(block, config, more_config, cosmology_params, dark_energy, reio
     init_power_temp = extract_initial_power_params(block, config, more_config)
 
     # do nothing except get linear power spectrum
-    p_temp = camb.CAMBparams(WantTransfer=True,
+    p_temp = mgcamb.CAMBparams(WantTransfer=True,
                              Want_CMB=False, Want_CMB_lensing=False, DoLensing=False,
                              NonLinear="NonLinear_none",
                              WantTensors=False, WantVectors=False, WantCls=False,
@@ -669,24 +886,26 @@ def sigma8_to_As(block, config, more_config, cosmology_params, dark_energy, reio
                          **cosmology_params)
     p_temp.set_matter_power(redshifts=[0.], nonlinear=False, **more_config["transfer_params"])
     p_temp.Reion = reion
-    r_temp = camb.get_results(p_temp)
+    r_temp = mgcamb.get_results(p_temp)
     temp_sig8 = r_temp.get_sigma8()[-1] #what sigma8 comes out from using temp_As?
     As = temp_As*(sigma_8_input/temp_sig8)**2
-    block[cosmo,'A_s'] = As    
+    block[cosmo,'A_s'] = As
+    #print(">>>>> temp_As",temp_As,'As',As,'sigma_8_input',sigma_8_input,'temp_sig8',temp_sig8)
+    
 
 def execute(block, config):
     config, more_config = config
-    p = "<Error occurred during parameter setup>"
-    try:
-        p = extract_camb_params(block, config, more_config)
+    p = extract_camb_params(block, config, more_config)
+    
 
+    try:
         if (not p.WantCls) and (not p.WantTransfer):
             # Background only mode
-            r = camb.get_background(p)
+            r = mgcamb.get_background(p)
         else:
             # other modes
-            r = camb.get_results(p)
-    except camb.CAMBError:
+            r = mgcamb.get_results(p)
+    except mgcamb.CAMBError:
         if more_config["n_printed_errors"] <= more_config["max_printed_errors"]:
             print("CAMB error caught: for these parameters")
             print(p)

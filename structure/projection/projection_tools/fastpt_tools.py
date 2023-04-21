@@ -6,6 +6,7 @@ from scipy.interpolate import InterpolatedUnivariateSpline as intspline
 from scipy.interpolate import RectBivariateSpline
 
 from fastpt import FASTPT as FASTPT
+#from fastpt.FASTPT import FASTPT
 from fastpt.P_extend import k_extend
 
 from cosmosis.datablock import names
@@ -123,7 +124,7 @@ def get_Pk_basis_funcs(block, pt_type,
         PXXNL_b1b2bsb3nl_z0 = {"Pd1d2" : PXXNL_b1b2bsb3nl[2],
             "Pd2d2" : PXXNL_b1b2bsb3nl[3], "Pd1s2" : PXXNL_b1b2bsb3nl[4],
             "Pd2s2" : PXXNL_b1b2bsb3nl[5], "Ps2s2" : PXXNL_b1b2bsb3nl[6],
-            "sig3nl" : PXXNL_b1b2bsb3nl[7], "sig4" : PXXNL_b1b2bsb3nl[8]}
+            "sig3nl" : PXXNL_b1b2bsb3nl[8], "sig4" : PXXNL_b1b2bsb3nl[7]}
 
         if output_nl_grid:   
             # interpolate to nl k grid.
@@ -132,7 +133,7 @@ def get_Pk_basis_funcs(block, pt_type,
                     PXXNL_b1b2bsb3nl_z0[key] = pk*np.ones_like(knl)
                 else:
                     PXXNL_b1b2bsb3nl_z0[key] = intspline(log_klin_fpt, pk)(log_knl)
-
+                    
         #Apply growth factor to make k,z arrays
         PXXNL_out = {}
         for key, pk in PXXNL_b1b2bsb3nl_z0.items():
