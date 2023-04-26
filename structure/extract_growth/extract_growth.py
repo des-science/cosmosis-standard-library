@@ -31,4 +31,11 @@ def execute(block, config):
     block[output_section, "d_z"] = D
     block[output_section, "f_z"] = f
 
+    # SJ edit 
+    # I am not sure sigma8(z=0) should be rescaled separately or not... 
+    # computed from camb (LCDM sigma8)
+    sigma8_0 = block[names.cosmological_parameters, 'sigma_8']
+    sigma8_z = sigma8_0*(D/D[z0])
+    block[output_section, "sigma_8"] = sigma8_z
+    block[output_section, "fsigma_8"] = sigma8_z * f
     return 0
