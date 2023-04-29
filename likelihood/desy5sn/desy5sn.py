@@ -197,6 +197,5 @@ class DESY5SNLikelihood(GaussianLikelihood):
             block[names.data_vector, self.like_name + "_simulation"] = sim
 
 
-
 # This takes our class and turns it into 
 setup, execute, cleanup = DESY5SNLikelihood.build_module()
