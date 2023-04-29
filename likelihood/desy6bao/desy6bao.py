@@ -22,6 +22,7 @@ DM_FIDUCIAL = 3110.6 #in Mpc
 def setup(options):
 	section = option_section
 	CHI2_file = os.path.join(ROOT_dir,'likelihood_mean.txt')
+	CHI2_file = options.get_string(section,"data_file", default=CHI2_file)
 	chi2 = np.loadtxt(CHI2_file)
 	redshift = options.get_double(section, "redshift", default=REDSHIFT)
 	feedback = options.get_int(option_section, "feedback", default=0)
