@@ -757,11 +757,12 @@ class NlgalNlgalSpectrum(LingalLingalSpectrum):
             self.bias_values_b, self.lin_bias_values_b = self.load_bias(
                 block, self.sample_b, pt_type)
 
-        # Get power spectrum terms from fastpt. These
+        # Get power spectrum terms from pt model. These
         # will be used later to form P_gg for a given bin
         # combination
         self.k_nl_bias, self.Pk_basis_funcs = get_Pk_basis_funcs(
-            block, self.pt_type, output_nl_grid=True)
+            block, self.pt_type, output_nl_grid=True,
+            use_pcb_for_k2=True)
 
         p = self.source.power[self.power_key]
         self.pk_chi_logk_spline = None # Set these to None as
@@ -852,7 +853,8 @@ class NlgalShearSpectrum(LingalLensingSpectrum):
         # will be used later to form P_gm for a given bin
         # combination
         self.k_nl_bias, self.Pk_basis_funcs = get_Pk_basis_funcs(
-            block, self.pt_type, output_nl_grid=True)
+            block, self.pt_type, output_nl_grid=True,
+            use_pcb_for_k2=False)
 
         p = self.source.power[self.power_key]
         self.pk_chi_logk_spline = None # Set these to None as
@@ -1253,6 +1255,8 @@ class SpectrumCalculator(object):
             self.dlogchi = None
         self.chi_pad_upper = options.get_double(option_section, "chi_pad_upper", 2.)
         self.chi_pad_lower = options.get_double(option_section, "chi_pad_lower", 2.)
+        self.pt_type = options.get_string(option_section, "pt_type", "oneloop_eul_bk")
+
 
         if len(self.do_exact_option_names)>0:
             sig_over_dchi_exact = options.get_double(option_section, "sig_over_dchi_exact", 20.)
@@ -1575,9 +1579,10 @@ class SpectrumCalculator(object):
         # Save auto_only - whether we've only computed autocorrelations
         block[spectrum.section_name, 'auto_only'] = (
             spectrum.section_name in self.auto_only_section_names)
-
+        
         # Set up nay required power splines
-        spectrum.prepare(block, lin_bias_prefix=self.lin_bias_prefix)
+        spectrum.prepare(block, lin_bias_prefix=self.lin_bias_prefix,
+                         pt_type=self.pt_type)
 
         if self.verbose:
             print(f"computing spectrum {spectrum.__class__.__name__} for samples"

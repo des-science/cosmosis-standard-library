@@ -14,7 +14,9 @@ def get_Pk_basis_funcs(block, pt_type,
     matter_power_lin_name=names.matter_power_lin,
     matter_power_nl_name=names.matter_power_nl,
     output_nl_grid=True, use_pnl_for_k2=True,
-    k_growth=1.e-3, fpt_upsample=4):
+    k_growth=1.e-3, fpt_upsample=4, use_pcb_for_k2=True,
+    r_cut=2
+):
     """
     Get the z=0,k-dependent basis functions required
     to construct the galaxy-galaxy
@@ -137,6 +139,64 @@ def get_Pk_basis_funcs(block, pt_type,
         PXXNL_out = {}
         for key, pk in PXXNL_b1b2bsb3nl_z0.items():
             PXXNL_out[key] = np.outer(growth**4, pk)
+            
+    elif pt_type in ['heft']:
+        nspec = 19
+        Pij_heft = np.zeros((znl.shape[0], knl.shape[0], nspec))
+        
+        for i in range(15):
+            z, k_heft, Pij = block.get_grid(f'aemulus_heft_P{i}_nl', "z", "k_h", "Pij_k")
+            if i>2:
+                kidx = k_heft < 1
+                k_heft = k_heft[kidx]
+                Pij = Pij[:,kidx]
+            
+            #print(np.min(k_heft), np.max(k_heft))
+            #print(np.min(knl), np.max(knl))
+            
+            nz = len(z)
+            if (knl[0] < k_heft[0]) or (knl[-1] > k_heft[-1]):
+                EK1 = k_extend(k_heft, np.log10(knl[0]), np.log10(knl[-1]))
+                k_heft = EK1.extrap_k()
+                Pij_temp = np.zeros((nz, len(k_heft)))
+                
+                for j in range(nz):
+                    
+                    Pij_zp = np.copy(Pij[j])
+                    #print(Pij_zp[0], Pij_zp[1], Pij_zp[-2], Pij_zp[-1])
+                    
+                    Pij_zp = EK1.extrap_P_low(Pij_zp)
+                    Pij_zp = EK1.extrap_P_high(Pij_zp)
+                    Pij_zm = np.copy(Pij[j])
+                    Pij_zm = EK1.extrap_P_low(-Pij_zm)
+                    Pij_zm = EK1.extrap_P_high(Pij_zm)
+                    
+                    Pij_temp[j,:] = Pij_zp
+                    #print('minus good where plus bad?', np.isfinite(-Pij_zm[Pij_temp[j,:]!=Pij_temp[j,:]]).all())
+                    Pij_temp[j,:][Pij_temp[j,:]!=Pij_temp[j,:]] = -Pij_zm[Pij_temp[j,:]!=Pij_temp[j,:]]
+            
+            Pij_heft[...,i] = interp1d(np.log(k_heft), Pij_temp, kind='cubic', axis=1)(log_knl)
+#                                       bounds_error=False, fill_value=0)(log_knl)
+            
+        if use_pcb_for_k2:
+            nabla_idx = [2, 4, 7, 11]        
+        else:
+            nabla_idx = [1, 3, 6, 10]
+        
+        #Pij_heft[...,15:] = -(knl[np.newaxis, :, np.newaxis] ** 2 * np.exp(-(knl[np.newaxis, :, np.newaxis]/k_cut)**2)) * Pij_heft[...,nabla_idx]
+        Pij_heft[...,15:] = -knl[np.newaxis, :, np.newaxis] ** 2 / (1 + (r_cut * knl[np.newaxis, :, np.newaxis] ** 2)) * Pij_heft[...,nabla_idx]
+        PXXNL_out = {}
+#        if not np.allclose(k_heft, knl):
+#            Pij_heft_out = np.zeros((len(z), len(knl), nspec))
+#            for i in range(nspec):
+#                Pij_heft_out[...,i] = intspline(np.log(k_heft), 
+#                                                Pij_heft[...,i],axis=-1)(log_knl)
+#            
+#        else:
+#            Pij_heft_out = Pij_heft
+        
+        PXXNL_out['Pij_heft'] = Pij_heft
+            
 
     else:
         raise ValueError("pt_type %s not valid"%pt_type)
@@ -230,6 +290,10 @@ def get_bias_params_bin(block, bin_num, pt_type, bias_section):
     if pt_type in ['oneloop_lag_bk']:
         param_names = ['b1E', 'b1L', 'b2L', 'bkE']
         param_defaults = [None, b1E - 1, 0.0, 0.0]
+        
+    elif pt_type in ['heft']:
+        param_names = ['b1E', 'b1L', 'b2L', 'bsL', 'bkxL', 'bkaL']
+        param_defaults = [None, b1E - 1, 0.0, 0.0, 0.0, 0.0]
 
     elif pt_type in ['oneloop_eul_bk']:
         param_names = ['b1E', 'b2E', 'bsE', 'b3nlE', 'bkE']
@@ -302,6 +366,36 @@ def get_PXm(bias_values, Pk_basis_funcs, pt_type):
 
         PXmNL = (PXmNL_terms["Pd1d1"] + PXmNL_terms["Pd1d2"] + PXmNL_terms["Pd1s2"]
             + PXmNL_terms["sig3nl"] + PXmNL_terms["k2P"])
+        
+    elif pt_type in ['heft']:
+        b1, b2, bs, bk = (bias_values["b1L"], bias_values["b2L"],
+                          bias_values["bsL"], bias_values["bkxL"])        
+        bterms_gm = [
+            0,
+            1,
+            0,
+            b1,
+            0,
+            0,
+            b2 / 2,
+            0,
+            0,
+            0,
+            bs,
+            0,
+            0,
+            0,
+            0,
+            bk,
+            0,
+            0,
+            0,
+        ]
+        
+        bterms_gm = np.array(bterms_gm)
+        Pij_heft = Pk_basis_funcs['Pij_heft']
+        PXmNL = np.einsum("b, zkb->zk", bterms_gm, Pij_heft)
+        PXmNL_terms = None
     else:
         raise ValueError("pt_type %s is not valid"%(pt_type))
     # print 'ending PXm array'
@@ -385,6 +479,34 @@ def get_PXX(bias_values_bin1, bias_values_bin2, Pk_basis_funcs, pt_type):
         PXXNL = (Pk_terms["Pd1d1"] + Pk_terms["Pd1d2"] + Pk_terms["Pd2d2"]
             + Pk_terms["Pd1s2"] + Pk_terms["Pd2s2"] + Pk_terms["Ps2s2"]
             + Pk_terms["sig3nl"] + Pk_terms["k2P"])
+        
+    elif pt_type in ['heft']:
+        bterms_gg = np.array([
+        0,
+        0,
+        1,
+        0,
+        bv1['b1L'] + bv2['b1L'],
+        bv1['b1L'] * bv2['b1L'],
+        0,
+        0.5*(bv1['b2L'] + bv2['b2L']),
+        0.5*(bv1['b1L'] * bv2['b2L'] + bv2['b1L'] * bv1['b2L']),
+        0.25 * (bv1['b2L'] * bv2['b2L']),
+        0,
+        bv1['bsL'] + bv2['bsL'],
+        bv1['b1L'] * bv2['bsL'] + bv2['b1L'] * bv1['bsL'],
+        0.5*(bv1['b2L'] * bv2['bsL'] + bv2['b2L'] * bv1['bsL']),
+        bv1['bsL'] * bv2['bsL'],
+        bv1['bkaL'] + bv2['bkaL'],
+        bv1['b1L'] * bv2['bkaL'] + bv2['b1L'] * bv1['bkaL'],
+        0.5*(bv1['b2L'] * bv2['bkaL'] + bv2['b2L'] * bv1['bkaL']),
+        bv1['bsL'] * bv2['bkaL'] + bv2['bsL'] * bv1['bkaL'],
+        ])
+        
+        bterms_gg = np.array(bterms_gg)
+        Pij_heft = Pk_basis_funcs['Pij_heft']
+        PXXNL = np.einsum("b, zkb->zk", bterms_gg, Pij_heft)
+        Pk_terms = None
 
     else:
         raise ValueError("pt_type %s is not valid"%(pt_type))
