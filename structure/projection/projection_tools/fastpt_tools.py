@@ -146,34 +146,9 @@ def get_Pk_basis_funcs(block, pt_type,
         
         for i in range(15):
             z, k_heft, Pij = block.get_grid(f'aemulus_heft_P{i}_nl', "z", "k_h", "Pij_k")
-            if i>2:
-                kidx = k_heft < 1
-                k_heft = k_heft[kidx]
-                Pij = Pij[:,kidx]
-            
-            nz = len(z)
-            if (knl[0] < k_heft[0]) or (knl[-1] > k_heft[-1]):
-                #extrapolation happens in aemulus_heft module now 
-                #so this probably shouldn't be triggered
-                print('extrapolate', flush=True)
-                EK1 = k_extend(k_heft, np.log10(knl[0]), np.log10(knl[-1]))
-                k_heft = EK1.extrap_k()
-                Pij_temp = np.zeros((nz, len(k_heft)))
-                
-                for j in range(nz):
-                    
-                    Pij_zp = np.copy(Pij[j])
-                    
-                    Pij_zp = EK1.extrap_P_low(Pij_zp)
-                    Pij_zp = EK1.extrap_P_high(Pij_zp)
-                    Pij_zm = np.copy(Pij[j])
-                    Pij_zm = EK1.extrap_P_low(-Pij_zm)
-                    Pij_zm = EK1.extrap_P_high(Pij_zm)
-                    
-                    Pij_temp[j,:] = Pij_zp
-                    Pij_temp[j,:][Pij_temp[j,:]!=Pij_temp[j,:]] = -Pij_zm[Pij_temp[j,:]!=Pij_temp[j,:]]
-            
-            Pij_heft[...,i] = interp1d(np.log(k_heft), Pij_temp, kind='cubic', axis=1)(log_knl)
+            Pij_heft[...,i] = interp1d(np.log(k_heft), Pij, kind='cubic', 
+                                       fill_value='extrapolate', bounds_error=False, 
+                                       axis=1)(log_knl)
             
         if use_pcb_for_k2:
             nabla_idx = [2, 4, 7, 11]        

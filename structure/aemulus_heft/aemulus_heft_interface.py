@@ -198,14 +198,14 @@ def execute(block, config):
     # Get z and k from the NL power section
     z, k, P_m_lin = block.get_grid(names.matter_power_lin, "z", "k_h", "P_k")
     z, k, P_cb_lin = block.get_grid(names.cdm_baryon_power_lin, "z", "k_h", "P_k")
-    print('kmin kmax nk', np.min(k), np.max(k), len(k))
+    
     if np.min(np.log10(k))>-3:
         raise ValueError('kmin needs to be < 1e-3 h/Mpc for HEFT')
     
     kt = np.logspace(np.min(np.log10(k)), 1, 100)
     kidx = k.searchsorted(3.99)
     k_heft = k[:kidx]
-    print('kmin kmax nk', np.min(k_heft), np.max(k_heft), len(k_heft))
+    
     
     P_m_lin = 10**interp1d(np.log10(k), np.log10(P_m_lin), axis=1, kind='cubic')(np.log10(kt))
     P_cb_lin = 10**interp1d(np.log10(k), np.log10(P_cb_lin), axis=1, kind='cubic')(np.log10(kt))
@@ -271,7 +271,6 @@ def execute(block, config):
                 Pij_temp[j,:] = Pij_zp
                 Pij_temp[j,:][Pij_temp[j,:]!=Pij_temp[j,:]] = -Pij_zm[Pij_temp[j,:]!=Pij_temp[j,:]]
         
-        print('knlmin, knlmax, kmin, kmax', np.min(knl), np.max(knl), np.min(k), np.max(k))
         spec_heft_all[...,i] = interp1d(np.log(knl), Pij_temp, kind='cubic', axis=1, 
                                         fill_value='extrapolate', bounds_error=False)(np.log(k))  
         
