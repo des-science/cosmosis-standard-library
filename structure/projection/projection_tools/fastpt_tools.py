@@ -151,11 +151,11 @@ def get_Pk_basis_funcs(block, pt_type,
                 k_heft = k_heft[kidx]
                 Pij = Pij[:,kidx]
             
-            #print(np.min(k_heft), np.max(k_heft))
-            #print(np.min(knl), np.max(knl))
-            
             nz = len(z)
             if (knl[0] < k_heft[0]) or (knl[-1] > k_heft[-1]):
+                #extrapolation happens in aemulus_heft module now 
+                #so this probably shouldn't be triggered
+                print('extrapolate', flush=True)
                 EK1 = k_extend(k_heft, np.log10(knl[0]), np.log10(knl[-1]))
                 k_heft = EK1.extrap_k()
                 Pij_temp = np.zeros((nz, len(k_heft)))
@@ -163,7 +163,6 @@ def get_Pk_basis_funcs(block, pt_type,
                 for j in range(nz):
                     
                     Pij_zp = np.copy(Pij[j])
-                    #print(Pij_zp[0], Pij_zp[1], Pij_zp[-2], Pij_zp[-1])
                     
                     Pij_zp = EK1.extrap_P_low(Pij_zp)
                     Pij_zp = EK1.extrap_P_high(Pij_zp)
@@ -172,28 +171,17 @@ def get_Pk_basis_funcs(block, pt_type,
                     Pij_zm = EK1.extrap_P_high(Pij_zm)
                     
                     Pij_temp[j,:] = Pij_zp
-                    #print('minus good where plus bad?', np.isfinite(-Pij_zm[Pij_temp[j,:]!=Pij_temp[j,:]]).all())
                     Pij_temp[j,:][Pij_temp[j,:]!=Pij_temp[j,:]] = -Pij_zm[Pij_temp[j,:]!=Pij_temp[j,:]]
             
             Pij_heft[...,i] = interp1d(np.log(k_heft), Pij_temp, kind='cubic', axis=1)(log_knl)
-#                                       bounds_error=False, fill_value=0)(log_knl)
             
         if use_pcb_for_k2:
             nabla_idx = [2, 4, 7, 11]        
         else:
             nabla_idx = [1, 3, 6, 10]
         
-        #Pij_heft[...,15:] = -(knl[np.newaxis, :, np.newaxis] ** 2 * np.exp(-(knl[np.newaxis, :, np.newaxis]/k_cut)**2)) * Pij_heft[...,nabla_idx]
         Pij_heft[...,15:] = -knl[np.newaxis, :, np.newaxis] ** 2 / (1 + (r_cut * knl[np.newaxis, :, np.newaxis] ** 2)) * Pij_heft[...,nabla_idx]
         PXXNL_out = {}
-#        if not np.allclose(k_heft, knl):
-#            Pij_heft_out = np.zeros((len(z), len(knl), nspec))
-#            for i in range(nspec):
-#                Pij_heft_out[...,i] = intspline(np.log(k_heft), 
-#                                                Pij_heft[...,i],axis=-1)(log_knl)
-#            
-#        else:
-#            Pij_heft_out = Pij_heft
         
         PXXNL_out['Pij_heft'] = Pij_heft
             
