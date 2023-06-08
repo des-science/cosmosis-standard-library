@@ -3,8 +3,11 @@ run:
 
 ```
 python3 -m pip install -v git+https://github.com/sfschen/velocileptors
-python3 -m pip install -v git+https://github.com/AemulusProject/aemulus_heft
+python3 -m pip install -v git+https://github.com/AemulusProject/aemulus_heft@dev
 ```
+
+I have included neural network emulators for the HEFT spectra in this repo, but these are not yet publicly released,
+so please do not use them for work outside of DES Y6KP.
 
 # aemulus_heft
 The emulator formerly known as anzu. A hybrid effective field theory (and matter power spectrum) emulator built from the Aemulus nu simulations 

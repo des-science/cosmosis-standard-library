@@ -3,7 +3,9 @@ import os
 from cosmosis.datablock import names, option_section
 from velocileptors.EPT.cleft_kexpanded_resummed_fftw import RKECLEFT
 from scipy.interpolate import interp1d
+from yaml import Loader
 import numpy as np
+import yaml
 
 dirname = os.path.split(__file__)[0]
 
@@ -93,11 +95,33 @@ class k_extend:
 def setup(options):
     input_section = options.get_string(option_section, "input_section", default=names.matter_power_lin)
     output_section = options.get_string(option_section, "output_section", default=names.matter_power_nl)
+    
+    config_abspath = "/".join(
+        [
+            os.path.dirname(os.path.realpath(__file__)),
+            "nn_cfg.yaml"
+        ]
+    )
+    
+    weight_abspath = "/".join(
+        [
+            os.path.dirname(os.path.realpath(__file__)),
+            "nn_weights/"
+        ]
+    )    
+    
+    with open(config_abspath, 'r') as fp:
+        cfg = yaml.load(fp, Loader=Loader)
+    
+    for i in range(len(cfg['pij_bases'])):
+        cfg['pij_bases'][i] = f"{weight_abspath}/{cfg['pij_bases'][i]}"
+        
+    cfg['s8z_base'] = f"{weight_abspath}/{cfg['s8z_base']}"
 
     # check everything imports
     from aemulus_heft.heft_emu import NNHEFTEmulator
 
-    emulator = NNHEFTEmulator()
+    emulator = NNHEFTEmulator(config=cfg, abspath=True)
 
     return [input_section, output_section, emulator]
 
