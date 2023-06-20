@@ -239,6 +239,7 @@ def setup(options):
     do_galaxy_intrinsic = options.get_bool(option_section, "do_galaxy_intrinsic", False)
     no_IA_E = options.get_bool(option_section, "no_IA_E", False)
     no_IA_B = options.get_bool(option_section, "no_IA_B", False)
+    include_z_scaling = options.get_bool(option_section, "include_z_scaling", True)
 
     if name:
         suffix = "_" + name
@@ -251,6 +252,7 @@ def setup(options):
         do_galaxy_intrinsic,
         no_IA_E,
         no_IA_B,
+        include_z_scaling,
     )
 
 
@@ -262,6 +264,7 @@ def execute(block, config):
         do_galaxy_intrinsic,
         no_IA_E,
         no_IA_B,
+        include_z_scaling,
     ) = config
 
     # Load linear and non-linear matter power spectra
@@ -297,10 +300,16 @@ def execute(block, config):
         raise ValueError("Deprecated TATT parameter specified: " + "C2")
 
     # Get main parameters - note that all are optional.
-    A1 = block.get_double(ia_section, "A1", 1.0)
-    A2 = block.get_double(ia_section, "A2", 1.0)
-    alpha1 = block.get_double(ia_section, "alpha1", 0.0)
-    alpha2 = block.get_double(ia_section, "alpha2", 0.0)
+    if include_z_scaling:
+        A1 = block.get_double(ia_section, "A1", 1.0)
+        A2 = block.get_double(ia_section, "A2", 1.0)
+        alpha1 = block.get_double(ia_section, "alpha1", 0.0)
+        alpha2 = block.get_double(ia_section, "alpha2", 0.0)
+    else:
+        A1 = block.get_double_array_1d(ia_section, "A1_z")
+        A2 = block.get_double_array_1d(ia_section, "A2_z")
+        alpha1 = 0.
+        alpha2 = 0.
     alphadel = block.get_double(ia_section, "alphadel", alpha1)
     z_piv = block.get_double(ia_section, "z_piv", 0.0)
 
