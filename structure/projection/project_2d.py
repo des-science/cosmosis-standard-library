@@ -224,6 +224,43 @@ class MatterPower3DPPF(Power3D):
         # Rebuild the spline
         self.set_chi_logk_spline()
 
+class NISDBGalaxyPower3D(Power3D):
+    section = "galaxy_power"
+    lin_section = "galaxy_power_lin"
+    source_specific = True
+
+    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-3):
+        stashed_lin_section_name = self.lin_section_name
+        self.lin_section_name = "matter_power_lin"
+        z_lin_m, k_lin_m, P_lin_m = block.get_grid(self.lin_section_name, "z", "k_h", "p_k")
+        super().set_nonlimber_splines(block, chi_of_z, k_growth=1.e-3)
+        self.lin_section_name = stashed_lin_section_name
+
+        z_lin, k_lin, P_lin = block.get_grid(self.lin_section_name, "z", "k_h", "p_k")
+        # Get z=0 slice and set up spline
+        AVERAGE_REDSHIFT_INDEX=0 
+        P_lin_z0 = P_lin_m[0,:]*P_lin[AVERAGE_REDSHIFT_INDEX,:]/P_lin_m[AVERAGE_REDSHIFT_INDEX,:]
+        P_lin_z0_resamp = interp.interp1d(np.log(k_lin), P_lin_z0,
+            kind="cubic", bounds_error=False, fill_value=0.)(self.logk_vals)
+
+        #need to get NISDB term of average redshift of bin, cannot be integrated over z
+        # and keeping it fixed to average z of the bin is good approximation
+        self.lin_z0_logk_spline = interp.InterpolatedUnivariateSpline(np.log(k_lin), P_lin_z0)
+
+        P_sublin_vals = self.pk_vals - P_lin_z0_resamp
+        self.sublin_spline = interp.RectBivariateSpline(self.chi_vals, self.logk_vals, P_sublin_vals)
+
+
+class NISDBMatterGalaxyPower3D(NISDBGalaxyPower3D):
+    section = "matter_galaxy_power"
+    lin_section = "matter_galaxy_power_lin"
+    source_specific = True
+
+class NISDBGalaxyIntrinsicPower3D(NISDBGalaxyPower3D):
+    section = "galaxy_intrinsic_power"
+    lin_section = "galaxy_intrinsic_power"
+    source_specific = True
+
 
 def get_lensing_prefactor(block):
     c_kms = 299792.4580
@@ -1302,6 +1339,47 @@ class SpectrumType(Enum):
         prefactor_type = (None, "mag")
         has_rsd = False
 
+    class NisdblingalNisdblingal(LingalLingalSpectrum):
+        power_3d_type = NISDBGalaxyPower3D
+        kernel_types = ("N", "N")
+        autocorrelation = True
+        name = "galaxy_cl"
+        prefactor_type = (None, None)
+        has_rsd = True
+    
+    class NisdblingalShear(LingalLensingSpectrum):
+        power_3d_type = NISDBMatterGalaxyPower3D
+        kernel_types = ("N", "W")
+        autocorrelation = False
+        name = "galaxy_shear_cl"
+        prefactor_type = (None, "lensing")
+        has_rsd = False
+
+    class NisdblingalMagnification(LingalLensingSpectrum):
+        autocorrelation = False
+        power_3d_type = NISDBMatterGalaxyPower3D
+        kernel_types = ("N", "W")
+        autocorrelation = False
+        name = "galaxy_magnification_cl"
+        prefactor_type = (None, "mag")
+        has_rsd = False
+
+    class NisdblingalIntrinsic(LingalLensingSpectrum):
+        power_3d_type = NISDBGalaxyIntrinsicPower3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = "galaxy_intrinsic_cl"
+        prefactor_type = (None, None)
+        has_rsd = False
+    
+    class NisdblingalCmbkappa(LingalLensingSpectrum):
+        power_3d_type = NISDBMatterGalaxyPower3D
+        kernel_types = ("N", "K")
+        autocorrelation = False
+        name = "galaxy_cmbkappa_cl"
+        prefactor_type = (None, "lensing")
+        has_rsd = False
+        
 class SpectrumCalculator(object):
     # It is useful to put this here so we can subclass to add new spectrum
     # types, for example ones done with modified gravity changes.
