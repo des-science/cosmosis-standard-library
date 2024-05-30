@@ -539,7 +539,6 @@ def compute_growth_factor(r, block, P_tot, k, z, more_config):
 
 
 def save_matter_power(r, p, block, more_config):
-
     # Grids in k, z on which to save matter power.
     # There are two kmax values - the max one calculated directly,
     # and the max one extrapolated out too.  We output to the larger
@@ -696,14 +695,17 @@ def execute(block, config):
             more_config["n_printed_errors"] += 1
         return 1
 
-    save_derived_parameters(r, p, block)
-    save_distances(r, p, block, more_config)
+    try: 
+        save_derived_parameters(r, p, block)
+        save_distances(r, p, block, more_config)
 
-    if p.WantTransfer:
-        save_matter_power(r, p, block, more_config)
+        if p.WantTransfer:
+            save_matter_power(r, p, block, more_config)
+        if p.WantCls:
+            save_cls(r, p, block)
 
-    if p.WantCls:
-        save_cls(r, p, block)
+    except (camb.CAMBError or camb.baseconfig.CAMBError):
+        return 1
     
     return 0
 
