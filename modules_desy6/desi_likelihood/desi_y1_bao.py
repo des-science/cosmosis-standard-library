@@ -5,6 +5,8 @@ from cosmosis.datablock import option_section, names
 from cosmosis.gaussian_likelihood import GaussianLikelihood
 
 ROOT_DIR = os.path.split(os.path.abspath(__file__))[0]
+ISO_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_y1_bao_iso.txt")
+ANI_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_y1_bao_ani.txt")
 
 class DESIY1BAOLikelihood(GaussianLikelihood):
 
@@ -12,8 +14,8 @@ class DESIY1BAOLikelihood(GaussianLikelihood):
 
     def __init__(self, options):
 
-        iso_file = os.path.join(ROOT_DIR, "desi_y1_bao_iso.txt")
-        ani_file = os.path.join(ROOT_DIR, "desi_y1_bao_ani.txt")
+        iso_file = options.get_string("iso_data_filename", default=ISO_DEFAULT_FILENAME)
+        ani_file = options.get_string("ani_data_filename", default=ANI_DEFAULT_FILENAME)
 
         iso_cols = ['z_eff', 'DVrd', 'DVrd_error']
         ani_cols = ['z_eff', 'DMrd', 'DMrd_error', 'DHrd', 'DHrd_error', 'corr']
