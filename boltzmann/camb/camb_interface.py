@@ -529,14 +529,14 @@ def compute_growth_factor(r, block, P_tot, k, z, more_config):
         # which we use for the growth.
         P_tot = r.get_matter_power_interpolator(nonlinear=False, extrap_kmax=more_config['kmax_extrapolate'])
 
-    # Evaluate it at the smallest k, for the 
-    kmin = k.min()
+    ##  Evaluate it at the smallest k, for the 
+    #kmin = k.min()
+    kmin = 0.01
     P_kmin = P_tot.P(z, kmin)
 
     D = np.sqrt(P_kmin / P_kmin[0]).squeeze()
+
     return D
-
-
 
 def save_matter_power(r, p, block, more_config):
     # Grids in k, z on which to save matter power.
@@ -548,8 +548,10 @@ def save_matter_power(r, p, block, more_config):
     # SJ edit 
     if more_config['cosmopower'] == True:
         z = np.array([block.get_double("cosmopower_training", 'z', default=0.0)])
+        zgrowth = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
     else:
         z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
+        zgrowth = z.copy()
 
     P_tot = None
 
@@ -583,19 +585,20 @@ def save_matter_power(r, p, block, more_config):
             section_name = matter_power_section_names[transfer_type] + "_nl"
             block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
 
+
     # Get growth rates and sigma_8
     sigma_8 = r.get_sigma8()[::-1]
     fsigma_8 = r.get_fsigma8()[::-1]
-    rs_DV, H, DA, F_AP = r.get_BAO(z, p).T
+    rs_DV, H, DA, F_AP = r.get_BAO(zgrowth, p).T
 
-    D = compute_growth_factor(r, block, P_tot, k, z, more_config)
+    D = compute_growth_factor(r, block, P_tot, k, zgrowth, more_config)
     # SJ edit 
     if more_config['cosmopower'] == True: D = np.array([D])
     f = fsigma_8 / sigma_8
 
     # Save growth rates and sigma_8
-    block[names.growth_parameters, "z"] = z
-    block[names.growth_parameters, "a"] = 1/(1+z)
+    block[names.growth_parameters, "z"] = zgrowth
+    block[names.growth_parameters, "a"] = 1/(1+zgrowth)
     block[names.growth_parameters, "sigma_8"] = sigma_8
     block[names.growth_parameters, "fsigma_8"] = fsigma_8
     block[names.growth_parameters, "rs_DV"] = rs_DV
@@ -695,17 +698,13 @@ def execute(block, config):
             more_config["n_printed_errors"] += 1
         return 1
 
-    try: 
-        save_derived_parameters(r, p, block)
-        save_distances(r, p, block, more_config)
+    save_derived_parameters(r, p, block)
+    save_distances(r, p, block, more_config)
 
-        if p.WantTransfer:
-            save_matter_power(r, p, block, more_config)
-        if p.WantCls:
-            save_cls(r, p, block)
-
-    except (camb.CAMBError or camb.baseconfig.CAMBError):
-        return 1
+    if p.WantTransfer:
+        save_matter_power(r, p, block, more_config)
+    if p.WantCls:
+        save_cls(r, p, block)
     
     return 0
 

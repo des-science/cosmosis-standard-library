@@ -103,7 +103,7 @@ class Power3D(object):
         """
         self.chi_logk_spline = interp.RectBivariateSpline(self.chi_vals, self.logk_vals, self.pk_vals)
 
-    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-3):
+    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-2):
         """
         Set up various splines etc. needed for the exact projection
         calculation
@@ -133,6 +133,7 @@ class Power3D(object):
         # Calculate growth for exact integral
         # Use (P(k=k_growth, z)/P(k=k_growth, z=0))^0.5
         # Actually just grab closet slice to k_growth
+
         growth_ind = (np.abs(k_lin-k_growth)).argmin()
         growth_vals = np.sqrt(np.divide(P_lin[:, growth_ind], P_lin[0, growth_ind],
                     out=np.zeros_like(P_lin[:, growth_ind]), where=P_lin[:, growth_ind]!=0.))
@@ -229,11 +230,11 @@ class NISDBGalaxyPower3D(Power3D):
     lin_section = "galaxy_power_lin"
     source_specific = True
 
-    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-3):
+    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-2):
         stashed_lin_section_name = self.lin_section_name
         self.lin_section_name = "matter_power_lin"
         z_lin_m, k_lin_m, P_lin_m = block.get_grid(self.lin_section_name, "z", "k_h", "p_k")
-        super().set_nonlimber_splines(block, chi_of_z, k_growth=1.e-3)
+        super().set_nonlimber_splines(block, chi_of_z, k_growth=1.e-2)
         self.lin_section_name = stashed_lin_section_name
 
         z_lin, k_lin, P_lin = block.get_grid(self.lin_section_name, "z", "k_h", "p_k")
@@ -1723,9 +1724,10 @@ class SpectrumCalculator(object):
                 # Get the growth rate from the matter power, by finding
                 # the nearest k value to 1e-3
                 z,k,pk_lin = block.get_grid(names.matter_power_lin, "z", "k_h", "p_k")
-                k_growth = 1.e-3
+                k_growth = 1.e-2
                 growth_ind = np.argmin(np.abs(k-k_growth))
                 growth_vals = np.sqrt(pk_lin[:, growth_ind] / pk_lin[0, growth_ind])
+
 
                 omega_m = block[names.cosmological_parameters, "omega_m"]
 
