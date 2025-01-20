@@ -377,7 +377,7 @@ def execute(block, config):
         ii_ee_total = E_factor * IA_terms["lin_II_EE"]
         ii_bb_total = 0.0 * IA_terms["ta_II_BB"]
         gi_e_total = E_factor * IA_terms["lin_GI"]
-        if use_weyl: giw_e_total = E_factor * IA_terms["li_w_GI"]
+        if use_weyl: giw_e_total = E_factor * IA_terms["lin_w_GI"]
 
     # Non-linear linear alignment model
     elif ia_model == "nla":
