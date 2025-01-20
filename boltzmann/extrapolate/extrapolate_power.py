@@ -44,11 +44,10 @@ def extrapolate_section(block, section, kmin, kmax, nmin, nmax, npoint, key):
     P_out = []
     for i in range(nz):
         Pi = P[:, i]
-        if section in ['weyl_curvature_matter_power_lin']:
+        if section in ['matter_power_weyl_curvature_power_lin', 'matter_power_weyl_curvature_power_nl']:
             Pi = np.abs(Pi)
-        logk, logp = linear_extend(log(k), log(Pi), log(
-            kmin), log(kmax), nmin, nmax, npoint)
-        if section in ['weyl_curvature_matter_power_lin']:
+        logk, logp = linear_extend(log(k), log(Pi), log(kmin), log(kmax), nmin, nmax, npoint)
+        if section in ['matter_power_weyl_curvature_power_lin', 'matter_power_weyl_curvature_power_nl']:
             P_out.append(-exp(logp))
         else:
             P_out.append(exp(logp))
