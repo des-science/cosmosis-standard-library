@@ -531,7 +531,8 @@ def compute_growth_factor(r, block, P_tot, k, z, more_config):
 
     ##  Evaluate it at the smallest k, for the 
     #kmin = k.min()
-    kmin = 0.01
+    # SJ edit: pick large kmin so we are sure quasi-static approximation is good
+    kmin = 0.1
     P_kmin = P_tot.P(z, kmin)
 
     D = np.sqrt(P_kmin / P_kmin[0]).squeeze()

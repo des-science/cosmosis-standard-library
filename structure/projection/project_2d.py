@@ -103,7 +103,7 @@ class Power3D(object):
         """
         self.chi_logk_spline = interp.RectBivariateSpline(self.chi_vals, self.logk_vals, self.pk_vals)
 
-    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-2):
+    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-1):
         """
         Set up various splines etc. needed for the exact projection
         calculation
@@ -230,11 +230,11 @@ class NISDBGalaxyPower3D(Power3D):
     lin_section = "galaxy_power_lin"
     source_specific = True
 
-    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-2):
+    def set_nonlimber_splines(self, block, chi_of_z, k_growth=1.e-1):
         stashed_lin_section_name = self.lin_section_name
         self.lin_section_name = "matter_power_lin"
         z_lin_m, k_lin_m, P_lin_m = block.get_grid(self.lin_section_name, "z", "k_h", "p_k")
-        super().set_nonlimber_splines(block, chi_of_z, k_growth=1.e-2)
+        super().set_nonlimber_splines(block, chi_of_z, k_growth=1.e-1)
         self.lin_section_name = stashed_lin_section_name
 
         z_lin, k_lin, P_lin = block.get_grid(self.lin_section_name, "z", "k_h", "p_k")
@@ -266,12 +266,13 @@ class NISDBGalaxyIntrinsicPower3D(NISDBGalaxyPower3D):
 def get_lensing_prefactor(block):
     c_kms = 299792.4580
     omega_m = block[names.cosmological_parameters, "omega_m"]
+    # matter=>weyl conversion factor = 3/2 * (100*h/c)^2 * Omega_m 
+    # h is dropped 
     shear_scaling = 1.5 * (100.0*100.0)/(c_kms*c_kms) * omega_m
     return shear_scaling
 
 def get_lensing_weyl_prefactor(block):
     h = block[names.cosmological_parameters, "h0"]
-    #shear_weyl_scaling = 1.0 / h**2
     # SJ: weyl power spectrum has negative sign.. 
     shear_weyl_scaling = -1.0 / h**2
     return shear_weyl_scaling
@@ -1724,7 +1725,8 @@ class SpectrumCalculator(object):
                 # Get the growth rate from the matter power, by finding
                 # the nearest k value to 1e-3
                 z,k,pk_lin = block.get_grid(names.matter_power_lin, "z", "k_h", "p_k")
-                k_growth = 1.e-2
+                # SJ edit: use large kmin so we are sure quasi-static approximation is good for w0wa and MG 
+                k_growth = 1.e-1
                 growth_ind = np.argmin(np.abs(k-k_growth))
                 growth_vals = np.sqrt(pk_lin[:, growth_ind] / pk_lin[0, growth_ind])
 
