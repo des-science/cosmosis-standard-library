@@ -10,7 +10,7 @@ ANI_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_dr2_bao_ani.txt")
 
 class DESIY1BAOLikelihood(GaussianLikelihood):
 
-    like_name = "desi_bao"
+    like_name = "desi_dr2_bao"
 
     def __init__(self, options):
 
@@ -20,9 +20,9 @@ class DESIY1BAOLikelihood(GaussianLikelihood):
         iso_cols = ['z_eff', 'DVrd', 'DVrd_error']
         ani_cols = ['z_eff', 'DMrd', 'DMrd_error', 'DHrd', 'DHrd_error', 'corr']
 
-        self.iso_data = {k: v for k,v in zip(iso_cols, np.loadtxt(iso_file, unpack=True))}
+        self.iso_data = {k: [v] for k,v in zip(iso_cols, np.loadtxt(iso_file, unpack=True))}
         self.ani_data = {k: v for k,v in zip(ani_cols, np.loadtxt(ani_file, unpack=True))}
-
+        
         self.niso = len(self.iso_data['z_eff'])
         self.nani = len(self.ani_data['z_eff'])
 
