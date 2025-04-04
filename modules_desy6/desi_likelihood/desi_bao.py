@@ -8,7 +8,7 @@ ROOT_DIR = os.path.split(os.path.abspath(__file__))[0]
 ISO_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_dr2_bao_iso.txt")
 ANI_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_dr2_bao_ani.txt")
 
-class DESIY1BAOLikelihood(GaussianLikelihood):
+class DESIY3BAOLikelihood(GaussianLikelihood):
 
     like_name = "desi_dr2_bao"
 
@@ -16,7 +16,6 @@ class DESIY1BAOLikelihood(GaussianLikelihood):
 
         iso_file = options.get_string("iso_data_filename", default=ISO_DEFAULT_FILENAME)
         ani_file = options.get_string("ani_data_filename", default=ANI_DEFAULT_FILENAME)
-
         iso_cols = ['z_eff', 'DVrd', 'DVrd_error']
         ani_cols = ['z_eff', 'DMrd', 'DMrd_error', 'DHrd', 'DHrd_error', 'corr']
 
@@ -101,5 +100,5 @@ class DESIY1BAOLikelihood(GaussianLikelihood):
 
         return np.concatenate([DVrd[:self.niso], DMrd[self.niso:], DHrd[self.niso:]])
 
-setup, execute, cleanup = DESIY1BAOLikelihood.build_module()
+setup, execute, cleanup = DESIY3BAOLikelihood.build_module()
 
