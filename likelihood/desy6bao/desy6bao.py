@@ -33,12 +33,11 @@ DA_FIDUCIAL = 1627.70
 DM_FIDUCIAL = DA_FIDUCIAL * (1 + REDSHIFT)
 
 
-CHI2_filename = os.path.join(ROOT_dir,'chi2profile_dvdesy6_cosmoplanck18_covcosmolike.csv')
-
 def setup(options):
 	section = option_section
-	CHI2_file = options.get_string(section,"data_file", default=CHI2_filename)
-	chi2 = np.loadtxt(CHI2_file, delimiter=',', skiprows=1)
+	# file from here: https://github.com/des-science/y6kp-bao-methods/blob/main/des-y6-bao/chi2profile_dvdesy6_cosmoplanck18_covcosmolike.csv
+	CHI2_file = os.path.join(ROOT_dir,'chi2profile_dvdesy6_cosmoplanck18_covcosmolike.txt')
+	chi2 = np.loadtxt(CHI2_file)
 	redshift = options.get_double(section, "redshift", default=REDSHIFT)
 	rs_fiducial = options.get_double(section, "rs_fid", default=RS_FIDUCIAL)
 	dm_fiducial = options.get_double(section, "dm_fid", default=DM_FIDUCIAL)
