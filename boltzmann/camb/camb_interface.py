@@ -359,8 +359,9 @@ def extract_camb_params(block, config, more_config):
 
     # Get optional parameters from datablock.
     cosmology_params = get_optional_params(block, cosmo, 
-        ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos", "meffsterile", 
-         ("A_lens", "Alens")])
+        ["TCMB", "YHe", "mnu", "nnu", "standard_neutrino_neff", "num_massive_neutrinos", "meffsterile", "Alens", 
+         #("A_lens", "Alens")
+         ])
 
     if block.has_value(cosmo, "massless_nu"):
         warnings.warn("Parameter massless_nu is being ignored. Set nnu, the effective number of relativistic species in the early Universe.")
@@ -426,6 +427,7 @@ def extract_camb_params(block, config, more_config):
             z = np.linspace(more_config['zmin'], more_config['zmax'], more_config["nz"])[::-1]
 
         p.set_matter_power(redshifts=z, nonlinear=config["NonLinear"] in ["NonLinear_both", "NonLinear_pk"], **more_config["transfer_params"])
+
 
     return p
 
