@@ -31,6 +31,7 @@ def setup(options):
     `n_modes`:    Number of compressed modes to use (per redshift bin, if each
                   bin has its own compression).  If omitted or set to <=0, all modes
                   in the `basis_file` will be used.
+    `no_degaussbins` List of redshift bins for which not to apply degaussianization.
 
     The `basis_file` should contain the following arrays:
     `U`:          An array of shape (n_modes, n_bins, n_z) giving the basis vectors (across n_z redshifts)
@@ -58,6 +59,7 @@ def setup(options):
     sample = options.get_string(option_section, "sample", "")
     basis_file = options.get_string(option_section, "basis_file", "")
     n_modes = options.get_int(option_section, "n_modes", 0)
+    no_degaussbins = options.get_string(option_section, "no_degaussbins", "")
 
     # Read the basis vectors and record sizes
     npzfile = np.load(basis_file)
@@ -101,6 +103,7 @@ def setup(options):
             "basis":U,
             "degauss":degauss,
             "n_modes":n_modes,
+            "no_degaussbins":no_degaussbins,
             "n_bins":n_bins,
             "perbin":perbin}
 
@@ -111,6 +114,7 @@ def execute(block, config):
     U = config['basis']
     degauss = config['degauss']
     n_modes = config['n_modes']
+    no_degaussbins = config['no_degaussbins']
     perbin = config['perbin']
     # Read z values from pz block
     nbin = block[pz, "nbin"]
@@ -127,13 +131,17 @@ def execute(block, config):
     # Read u values
     uvals = config['bias_section']
     u_ = np.zeros((nbin,n_modes))
+    # transform string with zbins not to be degauss to numpy array
+    no_degaussbins = np.fromstring(no_degaussbins, sep=' ', dtype=int)
     for i in range(nbin):
         if perbin:
             u_[i,:] = np.array([block[uvals, "u_{0}_{1}".format(i,j) ] for j in range(n_modes)])
             # Apply the degaussianization, if any:
-            if degauss:
+            if degauss and i not in no_degaussbins:
                 for j in range(n_modes):
                     u_[i,j] = degauss[i][j](u_[i,j])
+            else:
+                print(f'Not applying degauss to z-bin {i}')
         else:
             u_[i,:] = np.array([block[uvals, "u_{0}".format(j) ] for j in range(n_modes)])
             if degauss:
