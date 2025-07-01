@@ -26,9 +26,9 @@ params:
     type: int
     default: 0
   no_degaussbins:
-    meaning: List of redshift bins for which not apply degaussianization
-    type: str
-    default: ""
+    meaning: Lens redshift bin to not apply degaussianization
+    type: int
+    default: 9999
 inputs:
   wl_number_density:
     nbin:
