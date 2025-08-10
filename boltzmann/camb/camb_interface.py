@@ -425,7 +425,9 @@ def extract_camb_params(block, config, more_config):
                                             more_config['nz']-more_config['nz_mid'])))[::-1]
         else:
             z = np.linspace(more_config['zmin'], more_config['zmax'], more_config["nz"])[::-1]
-
+            #If desired, append logarithmically distributed redshifts
+            log_z = np.geomspace(more_config["zmax"], more_config['zmax_logz'], num = more_config['n_logz'])
+            z = np.append(z, log_z[1:])
         p.set_matter_power(redshifts=z, nonlinear=config["NonLinear"] in ["NonLinear_both", "NonLinear_pk"], **more_config["transfer_params"])
 
 
@@ -554,6 +556,9 @@ def save_matter_power(r, p, block, more_config):
         zgrowth = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
     else:
         z = np.linspace(more_config['zmin'], more_config['zmax'], more_config['nz'])
+        #If desired, append logarithmically distributed redshifts
+        log_z = np.geomspace(more_config["zmax"], more_config['zmax_logz'], num = more_config['n_logz'])
+        z = np.append(z, log_z[1:])
         zgrowth = z.copy()
 
     P_tot = None
@@ -598,7 +603,7 @@ def save_matter_power(r, p, block, more_config):
     # SJ edit 
     if more_config['cosmopower'] == True: D = np.array([D])
     f = fsigma_8 / sigma_8
-
+    
     # Save growth rates and sigma_8
     block[names.growth_parameters, "z"] = zgrowth
     block[names.growth_parameters, "a"] = 1/(1+zgrowth)
