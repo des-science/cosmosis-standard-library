@@ -7,6 +7,8 @@ cosmo = names.cosmological_parameters
 import numpy as np
 import os
 
+import scipy
+
 dirname = os.path.split(__file__)[0]
 
 def setup(options):
@@ -17,6 +19,10 @@ def setup(options):
 
     data_directory = os.path.join(dirname, 'data/v1.1/')
     data_directory = options.get_string(option_section, 'data_directory', default=data_directory)
+
+    # cosmoSIS theory output 
+    #sim_data_directory = os.path.join(dirname, 'sim_data/')
+    sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
 
     if not os.path.exists(data_directory):
         raise FileNotFoundError('Required data file not found at {}.\nPlease obtain it and place it correctly.\nThe script get-act-data.sh will download and place it.'.format(data_file))
@@ -40,8 +46,8 @@ def setup(options):
         scale_cov = float(scale_cov)
     varying_cmb_alens = options.get_bool(option_section, 'varying_cmb_alens', default=False) # Whether to divide the theory spectrum by Alens
 
-    if varying_cmb_alens and not block.has_value(cosmo, 'A_lens'):
-        raise RuntimeError('You have specified varying_cmb_alens: True to vary A_lens in the CMB lensing spectra, but given no A_lens value in the parameter file.')
+    #if varying_cmb_alens and not block.has_value(cosmo, 'alens'):     
+    #    raise RuntimeError('You have specified varying_cmb_alens: True to vary A_lens in the CMB lensing spectra, but given no A_lens value in the parameter file.')
 
     # This dict will now have entries like `data_binned_clkk` (binned data vector), `cov`
     # (covariance matrix) and `binmat_act` (binning matrix to be applied to a theory
@@ -53,10 +59,40 @@ def setup(options):
                                            mock=mock,nsims_act=nsims_act,nsims_planck=nsims_planck,
                                            trim_lmax=trim_lmax,scale_cov=scale_cov)
 
+    # replace real data with synthetic data 
+    if sim_data_directory != '': 
+        #variant_data = variant.split('_baseline')[0]
+        #sim_filepath='/scratch/fiat.lux/sjlee/y6kp-extensions/detg-model-test/chains/test_l_detg-fixmnu-hm20f-bfix_250811.nautilus.ext.nocuts.ini/cmb_cl/'
+        
+        sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
+        f1 = sim_ell * (sim_ell + 1) / (2 * np.pi)
+        sim_cl_pp = np.genfromtxt( sim_data_directory + 'cmb_cl/pp.txt') / f1
+        sim_cl_kk = act_dr6_lenslike.pp_to_kk(sim_cl_pp, sim_ell)
+        sim_clkk_interp = scipy.interpolate.interp1d(sim_ell, sim_cl_kk)
+
+        ell_data = data_dict['bcents_act']
+        sim_binned_clkk = sim_clkk_interp(ell_data)
+        if data_dict['include_planck']: 
+            ell_data_planck = data_dict['bcents_planck']
+            ell_data = np.append(ell_data, ell_data_planck)
+            sim_binned_clkk_planck = sim_clkk_interp(ell_data_planck)
+            sim_binned_clkk = np.append(sim_binned_clkk, sim_binned_clkk_planck)
+        data_dict['data_binned_clkk'] = sim_binned_clkk
+        # import matplotlib.pyplot as plt 
+        # fig, ax = plt.subplots()
+        # ax.plot(ell_data, sim_binned_clkk, 'o', label='sim')
+        # ax.plot(ell_data, data_dict['data_binned_clkk'], 'o',  label='data')
+        # ax.plot(ell_data_planck, sim_binned_clkk_planck, 'd', label='sim Planck')
+        # ax.plot(sim_ell, sim_cl_kk)
+        # ax.set_xscale('log')
+        # ax.legend()
+        # fig.savefig('/projects/fiat.lux/sjlee/workspace/des-repos/y6kp-extensions/detg-model-test/clkk.png')
+
     data_dict['cosmosis_like_only'] = like_only
     data_dict['trim_lmax'] = trim_lmax
     data_dict['varying_cmb_alens'] = varying_cmb_alens
     # data_dict['limber'] = limber
+
     return data_dict
 
 # def get_limber_clkk():
@@ -83,7 +119,7 @@ def execute(block, config):
     cl_pp = block[names.cmb_cl, 'pp'] / f1
 
     if data_dict['varying_cmb_alens']:
-        cl_pp /= block[cosmo, "A_lens"]
+        cl_pp /= block[cosmo, "alens"]
 
     # if data_dict['limber']:
     #     cl_kk = get_limber_clkk()
@@ -101,5 +137,5 @@ def execute(block, config):
         block[names.data_vector, 'act_dr6_lens_covariance'] = data_dict['cov']
         block[names.data_vector, 'act_dr6_lens_inverse_covariance'] = data_dict['cinv']
 
-
+    
     return 0
