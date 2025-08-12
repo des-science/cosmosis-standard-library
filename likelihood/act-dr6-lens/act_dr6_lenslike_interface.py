@@ -21,7 +21,6 @@ def setup(options):
     data_directory = options.get_string(option_section, 'data_directory', default=data_directory)
 
     # cosmoSIS theory output 
-    #sim_data_directory = os.path.join(dirname, 'sim_data/')
     sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
 
     if not os.path.exists(data_directory):
@@ -61,9 +60,7 @@ def setup(options):
 
     # replace real data with synthetic data 
     if sim_data_directory != '': 
-        #variant_data = variant.split('_baseline')[0]
-        #sim_filepath='/scratch/fiat.lux/sjlee/y6kp-extensions/detg-model-test/chains/test_l_detg-fixmnu-hm20f-bfix_250811.nautilus.ext.nocuts.ini/cmb_cl/'
-        
+
         sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
         f1 = sim_ell * (sim_ell + 1) / (2 * np.pi)
         sim_cl_pp = np.genfromtxt( sim_data_directory + 'cmb_cl/pp.txt') / f1
@@ -78,15 +75,6 @@ def setup(options):
             sim_binned_clkk_planck = sim_clkk_interp(ell_data_planck)
             sim_binned_clkk = np.append(sim_binned_clkk, sim_binned_clkk_planck)
         data_dict['data_binned_clkk'] = sim_binned_clkk
-        # import matplotlib.pyplot as plt 
-        # fig, ax = plt.subplots()
-        # ax.plot(ell_data, sim_binned_clkk, 'o', label='sim')
-        # ax.plot(ell_data, data_dict['data_binned_clkk'], 'o',  label='data')
-        # ax.plot(ell_data_planck, sim_binned_clkk_planck, 'd', label='sim Planck')
-        # ax.plot(sim_ell, sim_cl_kk)
-        # ax.set_xscale('log')
-        # ax.legend()
-        # fig.savefig('/projects/fiat.lux/sjlee/workspace/des-repos/y6kp-extensions/detg-model-test/clkk.png')
 
     data_dict['cosmosis_like_only'] = like_only
     data_dict['trim_lmax'] = trim_lmax
