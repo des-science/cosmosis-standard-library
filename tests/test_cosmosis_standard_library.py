@@ -33,6 +33,7 @@ def test_projection(capsys):
 
 def test_bao(capsys):
     run_cosmosis("examples/bao.ini")
+    check_likelihood(capsys, "-157.0", "-157.1", "-156.9")
     check_no_camb_warnings(capsys)
 
 def test_planck(capsys):
@@ -124,8 +125,13 @@ def test_act_dr6_lensing(capsys):
     check_likelihood(capsys, "-9.89", "-9.86", "-9.90")
     check_no_camb_warnings(capsys)
 
+def test_des_y3_5x2pt(capsys):
+    run_cosmosis("examples/des-y3-5x2pt.ini")
+    check_no_camb_warnings(capsys)
+
+
 def test_des_y3_6x2pt(capsys):
-    run_cosmosis("examples/des-y3-6x2.ini")
+    run_cosmosis("examples/des-y3-6x2pt.ini")
     check_no_camb_warnings(capsys)
 
 def test_euclid_emulator(capsys):
