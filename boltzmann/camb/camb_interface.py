@@ -122,6 +122,8 @@ def setup(options):
     config['want_zdrag'] = mode != MODE_BG
     config['want_zstar'] = config['want_zdrag']
 
+    more_config['recombination_model'] = options.get_string(opt, 'recombination_model', default='recfast')
+
     more_config['want_chistar'] = options.get_bool(opt, 'want_chistar', default=True)
     more_config['n_logz'] = options.get_int(opt, 'n_logz', default=0)
     more_config['zmax_logz'] = options.get_double(opt, 'zmax_logz', default = 1100.)
@@ -157,7 +159,7 @@ def setup(options):
         raise ValueError("halofit_version must be one of : {}.  You put: {}".format(known_halofit_versions, halofit_version))
 
     more_config["accuracy_params"] = get_optional_params(options, opt, 
-                                                        ['AccuracyBoost', 'lSampleBoost', 'lAccuracyBoost', 'DoLateRadTruncation'])
+                                                        ['AccuracyBoost', 'lSampleBoost', 'lAccuracyBoost', 'DoLateRadTruncation', 'min_l_logl_sampling'])
                                                         #  'TimeStepBoost', 'BackgroundTimeStepBoost', 'IntTolBoost', 
                                                         #  'SourcekAccuracyBoost', 'IntkAccuracyBoost', 'TransferkBoost',
                                                         #  'NonFlatIntAccuracyBoost', 'BessIntBoost', 'LensingBoost',
@@ -205,35 +207,39 @@ Please use any these (separated by spaces): {}""".format(bad_power, good_power))
 # during the execute function
 
 def extract_recombination_params(block, config, more_config):
-    default_recomb = camb.recombination.Recfast()
- 
-    min_a_evolve_Tm = block.get_double('recfast', 'min_a_evolve_Tm', default=default_recomb.min_a_evolve_Tm)
-    RECFAST_fudge = block.get_double('recfast', 'RECFAST_fudge', default=default_recomb.RECFAST_fudge)
-    RECFAST_fudge_He = block.get_double('recfast', 'RECFAST_fudge_He', default=default_recomb.RECFAST_fudge_He)
-    RECFAST_Heswitch = block.get_int('recfast', 'RECFAST_Heswitch', default=default_recomb.RECFAST_Heswitch)
-    RECFAST_Hswitch = block.get_bool('recfast', 'RECFAST_Hswitch', default=default_recomb.RECFAST_Hswitch)
-    AGauss1 = block.get_double('recfast', 'AGauss1', default=default_recomb.AGauss1)
-    AGauss2 = block.get_double('recfast', 'AGauss2', default=default_recomb.AGauss2)
-    zGauss1 = block.get_double('recfast', 'zGauss1', default=default_recomb.zGauss1)
-    zGauss2 = block.get_double('recfast', 'zGauss2', default=default_recomb.zGauss2)
-    wGauss1 = block.get_double('recfast', 'wGauss1', default=default_recomb.wGauss1)
-    wGauss2 = block.get_double('recfast', 'wGauss2', default=default_recomb.wGauss2)
-    
-    recomb = camb.recombination.Recfast(
-        min_a_evolve_Tm = min_a_evolve_Tm, 
-        RECFAST_fudge = RECFAST_fudge, 
-        RECFAST_fudge_He = RECFAST_fudge_He, 
-        RECFAST_Heswitch = RECFAST_Heswitch, 
-        RECFAST_Hswitch = RECFAST_Hswitch, 
-        AGauss1 = AGauss1, 
-        AGauss2 = AGauss2, 
-        zGauss1 = zGauss1, 
-        zGauss2 = zGauss2, 
-        wGauss1 = wGauss1, 
-        wGauss2 = wGauss2, 
-    )
+    if more_config['recombination_model'] == 'recfast':
+        default_recomb = camb.recombination.Recfast()
+     
+        min_a_evolve_Tm = block.get_double('recfast', 'min_a_evolve_Tm', default=default_recomb.min_a_evolve_Tm)
+        RECFAST_fudge = block.get_double('recfast', 'RECFAST_fudge', default=default_recomb.RECFAST_fudge)
+        RECFAST_fudge_He = block.get_double('recfast', 'RECFAST_fudge_He', default=default_recomb.RECFAST_fudge_He)
+        RECFAST_Heswitch = block.get_int('recfast', 'RECFAST_Heswitch', default=default_recomb.RECFAST_Heswitch)
+        RECFAST_Hswitch = block.get_bool('recfast', 'RECFAST_Hswitch', default=default_recomb.RECFAST_Hswitch)
+        AGauss1 = block.get_double('recfast', 'AGauss1', default=default_recomb.AGauss1)
+        AGauss2 = block.get_double('recfast', 'AGauss2', default=default_recomb.AGauss2)
+        zGauss1 = block.get_double('recfast', 'zGauss1', default=default_recomb.zGauss1)
+        zGauss2 = block.get_double('recfast', 'zGauss2', default=default_recomb.zGauss2)
+        wGauss1 = block.get_double('recfast', 'wGauss1', default=default_recomb.wGauss1)
+        wGauss2 = block.get_double('recfast', 'wGauss2', default=default_recomb.wGauss2)
+        
+        recomb = camb.recombination.Recfast(
+            min_a_evolve_Tm = min_a_evolve_Tm, 
+            RECFAST_fudge = RECFAST_fudge, 
+            RECFAST_fudge_He = RECFAST_fudge_He, 
+            RECFAST_Heswitch = RECFAST_Heswitch, 
+            RECFAST_Hswitch = RECFAST_Hswitch, 
+            AGauss1 = AGauss1, 
+            AGauss2 = AGauss2, 
+            zGauss1 = zGauss1, 
+            zGauss2 = zGauss2, 
+            wGauss1 = wGauss1, 
+            wGauss2 = wGauss2, 
+        )
 
-    #Not yet supporting CosmoRec, but not too hard if needed.
+    #Not yet supporting CosmoRec by default, but not too hard to compile in camb yourself if needed.
+    elif more_config['recombination_model'] == 'cosmorec':
+
+        recomb = camb.recombination.CosmoRec()
 
     return recomb
 
@@ -579,9 +585,11 @@ def save_matter_power(r, block, more_config):
         # Note that the transfer function has different k range and precision as
         # there is no interpolating function for it in CAMB.
         # We might consider creating an interpolator ...
+        # Note here, that like in the returned sigma_8 and fsigma_8, the redshifts here are reversed
+        # thus for a redshift=0 transfer function we ask for the last element
         section_name_transfer = matter_power_section_names[transfer_type] + "_transfer_func"
-        transfer_func = r.get_matter_transfer_data().transfer_z(tt)
-        k_transfer_func = r.get_matter_transfer_data().transfer_z("k/h")
+        transfer_func = r.get_matter_transfer_data().transfer_z(tt, -1)
+        k_transfer_func = r.get_matter_transfer_data().transfer_z("k/h", -1)
         block.put_double_array_1d(section_name_transfer, "k_h", k_transfer_func)
         block.put_double_array_1d(section_name_transfer, "t_k", transfer_func)
 
