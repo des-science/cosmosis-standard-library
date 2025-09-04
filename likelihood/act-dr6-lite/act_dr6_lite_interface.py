@@ -30,11 +30,17 @@ def execute(block, config):
         "ee": np.append(np.array([0,0]), block[names.cmb_cl, 'ee']),
     }
 
+    if block.has_value("planck", "a_planck"):
+        # When ACT is combined with Planck, they share calibration parameters 
+        # https://github.com/ACTCollaboration/DR6-ACT-lite/issues/12 
+        # when a_planck is found in value.ini, A_act is fixed to a_planck
+        block["act_params", "A_act"] = block["planck", "a_planck"]
+
     nuisance = {}
 
     for p in cal_params:
         nuisance[p] = block["act_params", p]
-    
+
     loglike = act.loglike(cl_dict, **nuisance)
 
     # Then call the act code
