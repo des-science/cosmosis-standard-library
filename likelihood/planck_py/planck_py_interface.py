@@ -78,9 +78,10 @@ class PlanckPythonLikelihood(GaussianLikelihood):
         Dltt = block[self.y_section, 'TT']
         Dlte = block[self.y_section, 'TE']
         Dlee = block[self.y_section, 'EE']
+        A_planck = block['planck', 'a_planck']
 
         try:
-            y = self.calculator.make_mean_vector(Dltt, Dlte, Dlee, ellmin=ellmin)
+            y = self.calculator.make_mean_vector(Dltt, Dlte, Dlee, ellmin=ellmin, calPlanck=A_planck)
         except ValueError:
             raise ValueError("CMB spectra not calculated to high enough ell for chosen Planck settings")
 
