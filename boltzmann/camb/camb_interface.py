@@ -10,8 +10,6 @@ import camb
 from camb.dark_energy import DarkEnergyModel
 from camb.baseconfig import F2003Class
 
-import pdb
-
 cosmo = names.cosmological_parameters
 
 MODE_BG = "background"
@@ -99,6 +97,8 @@ def setup(options):
     config['want_zdrag'] = mode != MODE_BG
     config['want_zstar'] = config['want_zdrag']
 
+    more_config['recombination_model'] = options.get_string(opt, 'recombination_model', default='recfast')
+
     more_config['want_chistar'] = options.get_bool(opt, 'want_chistar', default=True)
     more_config['n_logz'] = options.get_int(opt, 'n_logz', default=0)
     more_config['zmax_logz'] = options.get_double(opt, 'zmax_logz', default = 1100.)
@@ -160,7 +160,9 @@ def setup(options):
     more_config["transfer_params"]["kmax"] = options.get_double(opt, "kmax", default=10.0)
     # more_config["transfer_params"]["high_precision"] = options.get_bool(opt, "high_precision", default=True)
 
-    more_config['kmin'] = options.get_double(opt, "kmin", default=1e-5)
+    if options.has_value(opt, "kmin"):
+        warnings.warn("Option kmin does not have an effect.")
+    #more_config['kmin'] = options.get_double(opt, "kmin", default=1e-5)
     more_config['kmax'] = options.get_double(opt, "kmax", more_config["transfer_params"]["kmax"])
     more_config['kmax_extrapolate'] = options.get_double(opt, "kmax_extrapolate", default=more_config['kmax'])
     more_config['nk'] = options.get_int(opt, "nk", default=200)
@@ -185,35 +187,39 @@ Please use any these (separated by spaces): {}""".format(bad_power, good_power))
 # during the execute function
 
 def extract_recombination_params(block, config, more_config):
-    default_recomb = camb.recombination.Recfast()
+    if more_config['recombination_model'] == 'recfast':
+        default_recomb = camb.recombination.Recfast()
  
-    min_a_evolve_Tm = block.get_double('recfast', 'min_a_evolve_Tm', default=default_recomb.min_a_evolve_Tm)
-    RECFAST_fudge = block.get_double('recfast', 'RECFAST_fudge', default=default_recomb.RECFAST_fudge)
-    RECFAST_fudge_He = block.get_double('recfast', 'RECFAST_fudge_He', default=default_recomb.RECFAST_fudge_He)
-    RECFAST_Heswitch = block.get_int('recfast', 'RECFAST_Heswitch', default=default_recomb.RECFAST_Heswitch)
-    RECFAST_Hswitch = block.get_bool('recfast', 'RECFAST_Hswitch', default=default_recomb.RECFAST_Hswitch)
-    AGauss1 = block.get_double('recfast', 'AGauss1', default=default_recomb.AGauss1)
-    AGauss2 = block.get_double('recfast', 'AGauss2', default=default_recomb.AGauss2)
-    zGauss1 = block.get_double('recfast', 'zGauss1', default=default_recomb.zGauss1)
-    zGauss2 = block.get_double('recfast', 'zGauss2', default=default_recomb.zGauss2)
-    wGauss1 = block.get_double('recfast', 'wGauss1', default=default_recomb.wGauss1)
-    wGauss2 = block.get_double('recfast', 'wGauss2', default=default_recomb.wGauss2)
+        min_a_evolve_Tm = block.get_double('recfast', 'min_a_evolve_Tm', default=default_recomb.min_a_evolve_Tm)
+        RECFAST_fudge = block.get_double('recfast', 'RECFAST_fudge', default=default_recomb.RECFAST_fudge)
+        RECFAST_fudge_He = block.get_double('recfast', 'RECFAST_fudge_He', default=default_recomb.RECFAST_fudge_He)
+        RECFAST_Heswitch = block.get_int('recfast', 'RECFAST_Heswitch', default=default_recomb.RECFAST_Heswitch)
+        RECFAST_Hswitch = block.get_bool('recfast', 'RECFAST_Hswitch', default=default_recomb.RECFAST_Hswitch)
+        AGauss1 = block.get_double('recfast', 'AGauss1', default=default_recomb.AGauss1)
+        AGauss2 = block.get_double('recfast', 'AGauss2', default=default_recomb.AGauss2)
+        zGauss1 = block.get_double('recfast', 'zGauss1', default=default_recomb.zGauss1)
+        zGauss2 = block.get_double('recfast', 'zGauss2', default=default_recomb.zGauss2)
+        wGauss1 = block.get_double('recfast', 'wGauss1', default=default_recomb.wGauss1)
+        wGauss2 = block.get_double('recfast', 'wGauss2', default=default_recomb.wGauss2)
     
-    recomb = camb.recombination.Recfast(
-        min_a_evolve_Tm = min_a_evolve_Tm, 
-        RECFAST_fudge = RECFAST_fudge, 
-        RECFAST_fudge_He = RECFAST_fudge_He, 
-        RECFAST_Heswitch = RECFAST_Heswitch, 
-        RECFAST_Hswitch = RECFAST_Hswitch, 
-        AGauss1 = AGauss1, 
-        AGauss2 = AGauss2, 
-        zGauss1 = zGauss1, 
-        zGauss2 = zGauss2, 
-        wGauss1 = wGauss1, 
-        wGauss2 = wGauss2, 
-    )
+        recomb = camb.recombination.Recfast(
+            min_a_evolve_Tm = min_a_evolve_Tm, 
+            RECFAST_fudge = RECFAST_fudge, 
+            RECFAST_fudge_He = RECFAST_fudge_He, 
+            RECFAST_Heswitch = RECFAST_Heswitch, 
+            RECFAST_Hswitch = RECFAST_Hswitch, 
+            AGauss1 = AGauss1, 
+            AGauss2 = AGauss2, 
+            zGauss1 = zGauss1, 
+            zGauss2 = zGauss2, 
+            wGauss1 = wGauss1, 
+            wGauss2 = wGauss2, 
+        )
 
     #Not yet supporting CosmoRec, but not too hard if needed.
+    elif more_config['recombination_model'] == 'cosmorec':
+
+        recomb = camb.recombination.CosmoRec()
 
     return recomb
 
@@ -222,7 +228,7 @@ def extract_reionization_params(block, config, more_config):
     if more_config["do_reionization"]:
         if more_config['use_optical_depth']:
             tau = block[cosmo, 'tau']
-            reion = camb.reionization.TanhReionization(use_optical_depth=True, optical_depth=tau)
+            reion = camb.reionization.TanhReionization(use_optical_depth=True, optical_depth=tau, **more_config["reionization_params"])
         else:
             sec = 'reionization'
             redshift = block[sec, 'redshift']
@@ -252,7 +258,7 @@ def extract_dark_energy_params(block, config, more_config):
     if model == 'fluid' or model == 'DarkEnergyPPF' or model == 'ppf':
         if more_config['use_tabulated_w']:
             if block.has_value(cosmo, "consistency_module_was_used") and block.has_value(cosmo, "cosmomc_theta"):
-            raise RuntimeError("You used the consistency module with cosmomc_theta=T but are also"
+                raise RuntimeError("You used the consistency module with cosmomc_theta=T but are also"
                                "using a tabulated w(a) in camb. The theta-H0 relation as implemeted"
                                "in the consistency module will not work for models other than w0-wa"
                                )
@@ -377,12 +383,12 @@ def extract_camb_params(block, config, more_config):
 
 
     # Set h if provided, otherwise look for theta_mc
-    if block.has_value(cosmo, "hubble"):
+    if block.has_value(cosmo, "cosmomc_theta"):
+        cosmology_params["cosmomc_theta"] = block[cosmo, "cosmomc_theta"] / 100
+    elif block.has_value(cosmo, "hubble"):
         cosmology_params["H0"] = block[cosmo, "hubble"]
-    elif block.has_value(cosmo, "h0"):
+    else: 
         cosmology_params["H0"] = block[cosmo, "h0"]*100
-    else:
-        cosmology_params["cosmomc_theta"] = block[cosmo, "cosmomc_theta"]/100
 
     #JMedit
     if samplesig8:
@@ -554,7 +560,7 @@ def save_matter_power(r, p, block, more_config):
     # and the max one extrapolated out too.  We output to the larger
     # of these
     kmax_power = max(more_config['kmax'], more_config['kmax_extrapolate'])
-    k = np.logspace(np.log10(more_config['kmin']), np.log10(kmax_power), more_config['nk'])
+    #k = np.logspace(np.log10(more_config['kmin']), np.log10(kmax_power), more_config['nk'])
     # SJ edit 
     if more_config['cosmopower'] == True:
         z = np.array([block.get_double("cosmopower_training", 'z', default=0.0)])
@@ -578,6 +584,7 @@ def save_matter_power(r, p, block, more_config):
         P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, var1=tt, var2=tt, return_z_k=True,
                                         extrap_kmax=more_config['kmax_extrapolate'])
         assert P.islog
+        k = np.logspace(np.log10(kcalc[0]), np.log10(kmax_power), more_config['nk'])
         # P.P evaluates at k instead of logk
         p_k = P.P(z, k, grid=True)
 

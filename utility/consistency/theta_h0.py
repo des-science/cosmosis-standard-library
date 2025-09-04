@@ -1,19 +1,9 @@
-from astropy.cosmology import LambdaCDM
-from astropy import units, constants
+import camb
 import numpy as np
 import scipy.integrate
 import scipy.optimize
 
-def dtauda(a, cosmo):
-    z = 1.0 / a - 1
-    H = cosmo.H(z)
-    return  (constants.c / (H * a**2)).to("Mpc").value
 
-def dsound_da(a, cosmo):
-    ombh2 = cosmo.Ob0 * cosmo.h**2
-    R = 3.0e4 * a * ombh2
-    c_s = 1.0 / np.sqrt(3*(1+R))
-    return dtauda(a, cosmo) * c_s
 
 
 def H0_to_theta(hubble, omega_nu, omnuh2, mnu, TCMB, omega_m, ommh2, omega_c, omch2, omega_b, ombh2, omega_lambda, omlamh2, omega_k, num_massive_neutrinos, nnu, w, wa):
@@ -22,12 +12,12 @@ def H0_to_theta(hubble, omega_nu, omnuh2, mnu, TCMB, omega_m, ommh2, omega_c, om
         omnuh2 = omega_nu * h**2
     if np.isnan(omega_m):
         omega_m = ommh2 / h**2
-    if np.isnan(omega_b):
-        omega_b = ombh2 / h**2
+    if np.isnan(ombh2):
+        ombh2 = omega_b * h**2
     if np.isnan(omega_lambda):
         omega_lambda = omlamh2 / h**2
-    if np.isnan(omega_c):
-        omega_c = omch2 / h**2
+    if np.isnan(omch2):
+        omch2 = omega_c * h**2
     if np.isnan(omega_m):
         omega_m = omega_c + omega_b + omega_nu
     if np.isnan(omega_m):
@@ -41,8 +31,8 @@ def H0_to_theta(hubble, omega_nu, omnuh2, mnu, TCMB, omega_m, ommh2, omega_c, om
     if np.isnan([hubble, omega_m, omega_lambda, ombh2, mnu]).any():
         return np.nan
 
-    ombh2 = cosmo.Ob0 * cosmo.h**2
-    omdmh2 = cosmo.Om0 * cosmo.h**2
+    original_feedback_level = camb.config.FeedbackLevel
+
 
     try:
         camb.set_feedback_level(0)
@@ -89,14 +79,12 @@ def H0_to_theta_interface(params):
 
 def theta_to_H0(theta, omnuh2, mnu, TCMB, omch2, ombh2, omega_k, num_massive_neutrinos, nnu, w, wa):
     if np.isnan(mnu):
-        mnu = omnuh2 / ((nnu / 3.0) ** 0.75 / 94.06410581217612 * (TCMB/2.7255)**3)
+            mnu = omnuh2 / ((nnu / 3.0) ** 0.75 / 94.06410581217612 * (TCMB/2.7255)**3)
 
     if np.isnan([ombh2, omch2, theta, omega_k, mnu]).any():
         return np.nan
 
-    H0_min = 20.0
-    H0_max = 120.0
-
+    original_feedback_level = camb.config.FeedbackLevel
     try:
         camb.set_feedback_level(0)
         p = camb.CAMBparams()
@@ -114,27 +102,16 @@ def theta_to_H0(theta, omnuh2, mnu, TCMB, omch2, ombh2, omega_k, num_massive_neu
     finally:
         camb.config.FeedbackLevel = original_feedback_level
 
-    try:
-        theta_max = get_theta(H0_max)
-    except ValueError:
-        H0_max = 100.0
-
-    f = lambda H0: get_theta(H0) - theta
-    H0 = scipy.optimize.brentq(f, H0_min, H0_max, rtol=5e-5)
     return H0
 
 
-def theta_to_H0_interface(params):
-    theta = params['cosmomc_theta']
-    omega_nu = params.get('omega_nu', np.nan)
+def theta_to_H0_interface(params):  
+    theta = params['cosmomc_theta'] / 100
     omnuh2 = params.get('omnuh2', np.nan)
     mnu = params.get('mnu', np.nan)
     TCMB = params.get('TCMB', np.nan)
     omch2 = params.get('omch2', np.nan)
-    omega_b = params.get('omega_b', np.nan)
     ombh2 = params.get('ombh2', np.nan)
-    omega_lambda = params.get('omega_lambda', np.nan)
-    omlamh2 = params.get('omlamh2', np.nan)
     omegak = params.get('omega_k', np.nan)
     w = params.get('w', -1.0)
     wa = params.get('wa', 0.0)
