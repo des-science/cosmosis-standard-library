@@ -18,7 +18,18 @@ dirname = os.path.split(__file__)[0]
 def setup(options):
     act = act_dr6_cmbonly.ACTDR6CMBonly(packages_path=dirname)
 
-    # cosmoSIS theory output 
+    ell_min_tt = options.get_int(option_section, 'ell_min_tt', default=600)
+    ell_min_te = options.get_int(option_section, 'ell_min_te', default=600)
+    ell_min_ee = options.get_int(option_section, 'ell_min_ee', default=600)
+    ell_max_tt = options.get_int(option_section, 'ell_max_tt', default=6500)
+    ell_max_te = options.get_int(option_section, 'ell_max_te', default=6500)
+    ell_max_ee = options.get_int(option_section, 'ell_max_ee', default=6500)
+    act.ell_cuts['TT'] = [ell_min_tt, ell_max_tt]
+    act.ell_cuts['TE'] = [ell_min_te, ell_max_te]
+    act.ell_cuts['EE'] = [ell_min_ee, ell_max_ee]
+    print ('ell cuts:', act.ell_cuts)
+
+    # location of synthetic data (cosmoSIS theory output)
     sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
 
     # replace real data with synthetic data
