@@ -8,7 +8,7 @@ except ImportError:
         "git+https://github.com/Lbalkenhol/candl_data.git"
     )
 
-from cosmosis.datablock import names, SectionOptions
+from cosmosis.datablock import names, SectionOptions, option_section
 import numpy as np
 import importlib
 
@@ -114,6 +114,13 @@ class CandlCosmoSISLikelihood:
             ):
                 keep_prior_ix.append(i)
         self.candl_like.priors = [self.candl_like.priors[i] for i in keep_prior_ix]
+
+        # replace real data with synthetic data (cosmoSIS theory output)
+        if options.has_value("use_data_from_test"):
+            sim_data_path = options.get_string('use_data_from_test', default='')
+            print('SPT likelihood uses synthetic data from:', sim_data_path) 
+            self.candl_like._data_bandpowers = np.genfromtxt(sim_data_path)
+
 
     def reformat(self, block):
         """
@@ -254,6 +261,7 @@ class CandlCosmoSISLikelihood:
 
 def setup(options):
     options = SectionOptions(options)
+
     return CandlCosmoSISLikelihood(options)
 
 

@@ -23,6 +23,7 @@ def setup(options):
 
     # replace real data with synthetic data
     if sim_data_directory != '':
+        print ('ACT likelihood uses synthetic data from:', sim_data_directory)
         sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
         f1 = 1.0 #sim_ell * (sim_ell + 1) / (2 * np.pi)
         sim_cl_tt = np.genfromtxt( sim_data_directory + 'cmb_cl/tt.txt') / f1
@@ -68,5 +69,6 @@ def execute(block, config):
 
     # Then call the act code
     block[names.likelihoods, 'act_dr6_lite_like'] = loglike
+    block[names.data_vector, "act_dr6_lite_data"] = act.data_vec
 
     return 0
