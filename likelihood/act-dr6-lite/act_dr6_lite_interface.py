@@ -16,6 +16,7 @@ cal_params = [
 dirname = os.path.split(__file__)[0]
 
 def setup(options):
+
     act = act_dr6_cmbonly.ACTDR6CMBonly(packages_path=dirname)
 
     ell_min_tt = options.get_int(option_section, 'ell_min_tt', default=600)
@@ -27,21 +28,32 @@ def setup(options):
     act.ell_cuts['TT'] = [ell_min_tt, ell_max_tt]
     act.ell_cuts['TE'] = [ell_min_te, ell_max_te]
     act.ell_cuts['EE'] = [ell_min_ee, ell_max_ee]
-    print ('ell cuts:', act.ell_cuts)
+    act.lmax_theory=8500
+
+    # reset internal prior setting 
+    act.params={}
+    # should be initialize again to load changed settings
+    act.initialize()
+    for pol in act.ell_cuts.keys():
+        lmin, lmax = act.ell_cuts[pol]
+        print (f"Cutting {pol} data to the range [{lmin}-{lmax}]") 
 
     # location of synthetic data (cosmoSIS theory output)
     sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
-
+    
     # replace real data with synthetic data
     if sim_data_directory != '':
+        
         print ('ACT likelihood uses synthetic data from:', sim_data_directory)
-        sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
-        f1 = 1.0 #sim_ell * (sim_ell + 1) / (2 * np.pi)
-        sim_cl_tt = np.genfromtxt( sim_data_directory + 'cmb_cl/tt.txt') / f1
-        sim_cl_te = np.genfromtxt( sim_data_directory + 'cmb_cl/te.txt') / f1
-        sim_cl_ee = np.genfromtxt( sim_data_directory + 'cmb_cl/ee.txt') / f1
-        sim_cl_dict = {'tt':sim_cl_tt, 'te':sim_cl_te, 'ee':sim_cl_ee}
-        nell = sim_ell.shape
+
+        #sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
+        f1 = 1.0 # sim_ell * (sim_ell + 1) / (2 * np.pi)
+        sim_cl_tt = np.genfromtxt( sim_data_directory + 'cmb_cl/tt.txt') # / f1
+        sim_cl_te = np.genfromtxt( sim_data_directory + 'cmb_cl/te.txt') #/ f1
+        sim_cl_ee = np.genfromtxt( sim_data_directory + 'cmb_cl/ee.txt') #/ f1
+        sim_cl_dict = {'tt':np.append(np.array([0,0]), sim_cl_tt), 
+                       'te':np.append(np.array([0,0]), sim_cl_te), 
+                       'ee':np.append(np.array([0,0]), sim_cl_ee)}
 
         ps_vec = np.zeros_like(act.data_vec)
         for m in act.spec_meta:
@@ -52,13 +64,12 @@ def setup(options):
             dat = sim_cl_dict[pol][ls]
             ps_vec[idx] = win @ dat
         act.data_vec = ps_vec
-
+    
     return act
 
 
 def execute(block, config):
     act = config
-
     cl_dict = {
         "tt": np.append(np.array([0,0]), block[names.cmb_cl, 'tt']),
         "te": np.append(np.array([0,0]), block[names.cmb_cl, 'te']),
@@ -77,7 +88,6 @@ def execute(block, config):
         nuisance[p] = block["act_params", p]
 
     loglike = act.loglike(cl_dict, **nuisance)
-
     # Then call the act code
     block[names.likelihoods, 'act_dr6_lite_like'] = loglike
     block[names.data_vector, "act_dr6_lite_data"] = act.data_vec
