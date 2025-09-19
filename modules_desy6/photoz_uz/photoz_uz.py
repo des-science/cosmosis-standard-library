@@ -62,12 +62,14 @@ def setup(options):
     # only lens modes are degauss
     if sample == 'lens':
         # no_degaussbins = options.get_int(option_section, "no_degaussbins", 9999)
-        no_degaussbins = options.get_string(option_section, "no_degaussbins")
+        no_degaussbins = options.get_string(option_section, "no_degaussbins", "")
         # convert from string to array of int
-        no_degaussbins = np.array([int(x.strip()) for x in no_degaussbins.split(",")])
+        if no_degaussbins is not "":
+            no_degaussbins = np.array([int(x.strip()) for x in no_degaussbins.split(",")])
+        else: 
+            no_degaussbins = np.array([])
     else:
         no_degaussbins = np.array([])
-
     print('Lens z-bins degauss = ', no_degaussbins)
 
     # Read the basis vectors and record sizes
