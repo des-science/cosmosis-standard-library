@@ -61,9 +61,14 @@ def setup(options):
     n_modes = options.get_int(option_section, "n_modes", 0)
     # only lens modes are degauss
     if sample == 'lens':
-        no_degaussbins = options.get_int(option_section, "no_degaussbins", 9999)
+        # no_degaussbins = options.get_int(option_section, "no_degaussbins", 9999)
+        no_degaussbins = options.get_string(option_section, "no_degaussbins")
+        # convert from string to array of int
+        no_degaussbins = np.array([int(x.strip()) for x in no_degaussbins.split(",")])
     else:
         no_degaussbins = np.array([])
+
+    print('Lens z-bins degauss = ', no_degaussbins)
 
     # Read the basis vectors and record sizes
     npzfile = np.load(basis_file)
@@ -143,7 +148,7 @@ def execute(block, config):
         if perbin:
             u_[i,:] = np.array([block[uvals, "u_{0}_{1}".format(i,j) ] for j in range(n_modes)])
             # Apply the degaussianization, if any:
-            if degauss and i not in [no_degaussbins]:
+            if degauss and i not in no_degaussbins:
                 for j in range(n_modes):
                     u_[i,j] = degauss[i][j](u_[i,j])
             else:
