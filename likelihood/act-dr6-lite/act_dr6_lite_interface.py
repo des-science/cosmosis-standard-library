@@ -2,7 +2,7 @@ try:
     import act_dr6_cmbonly
 except ImportError:
     raise RuntimeError('The act_dr6_cmbonly python module is required for the act_dr6_lite likelihood. It can be obtained from https://github.com/ACTCollaboration/DR6-ACT-lite')
-from cosmosis.datablock import names
+from cosmosis.datablock import option_section, names
 cosmo = names.cosmological_parameters
 import numpy as np
 import os
@@ -31,20 +31,20 @@ def setup(options):
     act.ell_cuts['EE'] = [ell_min_ee, ell_max_ee]
     act.lmax_theory=8500
 
-    # reset internal prior setting 
+    # reset internal prior setting
     act.params={}
     # should be initialize again to load changed settings
     act.initialize()
     for pol in act.ell_cuts.keys():
         lmin, lmax = act.ell_cuts[pol]
-        print (f"Cutting {pol} data to the range [{lmin}-{lmax}]") 
+        print (f"Cutting {pol} data to the range [{lmin}-{lmax}]")
 
     # location of synthetic data (cosmoSIS theory output)
     sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
-    
+
     # replace real data with synthetic data
     if sim_data_directory != '':
-        
+
         print ('ACT likelihood uses synthetic data from:', sim_data_directory)
 
         #sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
@@ -52,8 +52,8 @@ def setup(options):
         sim_cl_tt = np.genfromtxt( sim_data_directory + 'cmb_cl/tt.txt') # / f1
         sim_cl_te = np.genfromtxt( sim_data_directory + 'cmb_cl/te.txt') #/ f1
         sim_cl_ee = np.genfromtxt( sim_data_directory + 'cmb_cl/ee.txt') #/ f1
-        sim_cl_dict = {'tt':np.append(np.array([0,0]), sim_cl_tt), 
-                       'te':np.append(np.array([0,0]), sim_cl_te), 
+        sim_cl_dict = {'tt':np.append(np.array([0,0]), sim_cl_tt),
+                       'te':np.append(np.array([0,0]), sim_cl_te),
                        'ee':np.append(np.array([0,0]), sim_cl_ee)}
 
         ps_vec = np.zeros_like(act.data_vec)
@@ -65,7 +65,7 @@ def setup(options):
             dat = sim_cl_dict[pol][ls]
             ps_vec[idx] = win @ dat
         act.data_vec = ps_vec
-    
+
     return act
 
 
@@ -78,8 +78,8 @@ def execute(block, config):
     }
 
     if block.has_value("planck", "a_planck"):
-        # When ACT is combined with Planck, they share calibration parameters 
-        # https://github.com/ACTCollaboration/DR6-ACT-lite/issues/12 
+        # When ACT is combined with Planck, they share calibration parameters
+        # https://github.com/ACTCollaboration/DR6-ACT-lite/issues/12
         # when a_planck is found in value.ini, A_act is fixed to a_planck
         block["act_params", "A_act"] = block["planck", "a_planck"]
 
