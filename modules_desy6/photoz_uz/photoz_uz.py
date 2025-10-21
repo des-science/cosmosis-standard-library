@@ -64,7 +64,7 @@ def setup(options):
         # no_degaussbins = options.get_int(option_section, "no_degaussbins", 9999)
         no_degaussbins = options.get_string(option_section, "no_degaussbins", "")
         # convert from string to array of int
-        if no_degaussbins is not "":
+        if no_degaussbins != "":
             no_degaussbins = np.array([int(x.strip()) for x in no_degaussbins.split(",")])
         else: 
             no_degaussbins = np.array([])
