@@ -223,15 +223,15 @@ class CandlCosmoSISLikelihood:
         """
         model_dict = self.reformat(block)
 
+        # Get model spectra also.
+        logl = self.candl_like.log_like(model_dict)
+
         # If we only want the likelihood then we can skip
         # separately getting the model spectra and data vector.
         # This is slightly faster in some cases.
         if self.likelihood_only:
-            return self.candl_like.log_like(model_dict)
-
-        # Get model spectra also.
-        logl = self.candl_like.log_like(model_dict)
-
+            return float(logl)
+        
         # In candl the LensLike class get_model_specs method
         # returns theory values already binned into bandpowers.
         # The Like class does not do this, so we need to.
