@@ -635,6 +635,17 @@ def save_matter_power(r, p, block, more_config):
     block[names.cosmological_parameters, "sigma_12"] = sigma12
     block[names.cosmological_parameters, "S_8"] = sigma_8[0]*np.sqrt(p.omegam/0.3)
 
+    # other sigma_8 quantities for DESI Shapefit
+    R=np.linspace(5, 20, 50)
+    R_vc, z_vc, sigma8_vc = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_cdm', return_R_z=True)
+    block[names.growth_parameters, "sigma_8_vc"] = sigma8_vc[::-1, :]
+    block[names.growth_parameters, "R"]= R_vc
+    
+    R_vb, z_vb, sigma8_vb = r.get_sigmaR(R, var1='v_newtonian_baryon', var2='v_newtonian_baryon', return_R_z=True)
+    block[names.growth_parameters, "sigma_8_vb"] = sigma8_vb[::-1, :]
+
+    R_vcb, z_vcb, sigma8_vcb = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_baryon', return_R_z=True)
+    block[names.growth_parameters, "sigma_8_vcb"] = sigma8_vcb[::-1, :]
 
 def save_cls(r, p, block):
     # Get total (scalar + tensor) lensed CMB Cls
