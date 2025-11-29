@@ -573,38 +573,83 @@ def save_matter_power(r, p, block, more_config):
         zgrowth = z.copy()
 
     P_tot = None
+    
+    _num_power = len(more_config['power_spectra'])
+    for t1 in range(_num_power):
+        for t2 in range(t1, _num_power):
 
-    for transfer_type in more_config['power_spectra']:
-        # Deal with case consistency in Weyl option
-        tt = transfer_type if transfer_type != 'weyl' else 'Weyl'
+            transfer_type_1 = more_config['power_spectra'][t1]
+            transfer_type_2 = more_config['power_spectra'][t2]
 
-        # Get an interpolator.  By default bicubic if size is large enough,
-        # otherwise it drops down to linear.
-        # First we do the linear version of the spectrum
-        P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, var1=tt, var2=tt, return_z_k=True,
-                                        extrap_kmax=more_config['kmax_extrapolate'])
-        assert P.islog
-        k = np.logspace(np.log10(kcalc[0]), np.log10(kmax_power), more_config['nk'])
-        # P.P evaluates at k instead of logk
-        p_k = P.P(z, k, grid=True)
+            # Deal with case consistency in Weyl option
+            transfer_type_1 = transfer_type_1 if transfer_type_1 != 'weyl' else 'Weyl'
+            transfer_type_2 = transfer_type_2 if transfer_type_2 != 'weyl' else 'Weyl'
 
-        # Save this for the growth rate later
-        if transfer_type == 'delta_tot':
-            P_tot = P
-
-        # Save the linear
-        section_name = matter_power_section_names[transfer_type] + "_lin"
-        block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
-
-        # Now if requested we also save the linear version
-        if p.NonLinear is not camb.model.NonLinear_none:
-            # Exact same process as before
-            P = r.get_matter_power_interpolator(nonlinear=True, var1=tt, var2=tt,
-                                            extrap_kmax=more_config['kmax_extrapolate'])
+            # Get an interpolator.  By default bicubic if size is large enough,
+            # otherwise it drops down to linear.
+            # First we do the linear version of the spectrum
+            P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, 
+                                                              var1=transfer_type_1, 
+                                                              var2=transfer_type_2, 
+                                                              return_z_k=True,
+                                                              extrap_kmax=more_config['kmax_extrapolate'])
+            assert P.islog
+            k = np.logspace(np.log10(kcalc[0]), np.log10(kmax_power), more_config['nk'])
+            # P.P evaluates at k instead of logk
             p_k = P.P(z, k, grid=True)
-            section_name = matter_power_section_names[transfer_type] + "_nl"
-            block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
 
+            # Save this for the growth rate later
+            if transfer_type_1 == 'delta_tot' and transfer_type_2 == 'delta_tot':
+                P_tot = P
+
+            # Save the linear
+            if transfer_type_1 == transfer_type_2:
+                section_name = matter_power_section_names[transfer_type_1.lower()] 
+            else:
+                section_name = matter_power_section_names[transfer_type_1.lower()] + '_' + matter_power_section_names[transfer_type_2.lower()]
+            
+            block.put_grid(section_name + "_lin", "z", z, "k_h", k, "p_k", p_k)
+
+            # Now if requested we also save the linear version
+            if p.NonLinear is not camb.model.NonLinear_none:
+                # Exact same process as before
+                P = r.get_matter_power_interpolator(nonlinear=True, 
+                                                    var1=transfer_type_1, 
+                                                    var2=transfer_type_2, 
+                                                    extrap_kmax=more_config['kmax_extrapolate'])
+                p_k = P.P(z, k, grid=True)
+                block.put_grid(section_name + "_nl", "z", z, "k_h", k, "p_k", p_k)
+
+    #for transfer_type in more_config['power_spectra']:
+    #    # Deal with case consistency in Weyl option
+    #    tt = transfer_type if transfer_type != 'weyl' else 'Weyl'
+#
+    #    # Get an interpolator.  By default bicubic if size is large enough,
+    #    # otherwise it drops down to linear.
+    #    # First we do the linear version of the spectrum
+    #    P, zcalc, kcalc = r.get_matter_power_interpolator(nonlinear=False, var1=tt, var2=tt, return_z_k=True,
+    #                                    extrap_kmax=more_config['kmax_extrapolate'])
+    #    assert P.islog
+    #    k = np.logspace(np.log10(kcalc[0]), np.log10(kmax_power), more_config['nk'])
+    #    # P.P evaluates at k instead of logk
+    #    p_k = P.P(z, k, grid=True)
+#
+    #    # Save this for the growth rate later
+    #    if transfer_type == 'delta_tot':
+    #        P_tot = P
+#
+    #    # Save the linear
+    #    section_name = matter_power_section_names[transfer_type] + "_lin"
+    #    block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
+#
+    #    # Now if requested we also save the linear version
+    #    if p.NonLinear is not camb.model.NonLinear_none:
+    #        # Exact same process as before
+    #        P = r.get_matter_power_interpolator(nonlinear=True, var1=tt, var2=tt,
+    #                                        extrap_kmax=more_config['kmax_extrapolate'])
+    #        p_k = P.P(z, k, grid=True)
+    #        section_name = matter_power_section_names[transfer_type] + "_nl"
+    #        block.put_grid(section_name, "z", z, "k_h", k, "p_k", p_k)
 
     # Get growth rates and sigma_8
     sigma_8 = r.get_sigma8()[::-1]
@@ -631,20 +676,23 @@ def save_matter_power(r, p, block, more_config):
     block[names.cosmological_parameters, "sigma_8"] = sigma_8[0]    
 
     # sigma12 and S_8 - other variants of sigma_8
-    sigma12 = r.get_sigmaR(R=12.0, z_indices=-1, hubble_units=False)
+    sigma12 = r.get_sigmaR(R=12.0, z_indices=-1, hubble_units=True)
     block[names.cosmological_parameters, "sigma_12"] = sigma12
     block[names.cosmological_parameters, "S_8"] = sigma_8[0]*np.sqrt(p.omegam/0.3)
 
     # other sigma_8 quantities for DESI Shapefit
-    R=np.linspace(5, 20, 50)
-    R_vc, z_vc, sigma8_vc = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_cdm', return_R_z=True)
+    #import ipdb; ipdb.set_trace()
+    R=np.linspace(5, 15, 20) # unit Mpc/h  
+
+    block[names.growth_parameters, "R"]= R
+
+    sigma8_vc = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_cdm')
     block[names.growth_parameters, "sigma_8_vc"] = sigma8_vc[::-1, :]
-    block[names.growth_parameters, "R"]= R_vc
     
-    R_vb, z_vb, sigma8_vb = r.get_sigmaR(R, var1='v_newtonian_baryon', var2='v_newtonian_baryon', return_R_z=True)
+    sigma8_vb = r.get_sigmaR(R, var1='v_newtonian_baryon', var2='v_newtonian_baryon')
     block[names.growth_parameters, "sigma_8_vb"] = sigma8_vb[::-1, :]
 
-    R_vcb, z_vcb, sigma8_vcb = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_baryon', return_R_z=True)
+    sigma8_vcb = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_baryon')
     block[names.growth_parameters, "sigma_8_vcb"] = sigma8_vcb[::-1, :]
 
 def save_cls(r, p, block):

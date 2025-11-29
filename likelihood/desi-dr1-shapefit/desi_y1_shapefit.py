@@ -10,10 +10,8 @@ ROOT_DIR = os.path.split(os.path.abspath(__file__))[0]
 DAT_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_2024_gaussian_shapefit-bao_ALL_GCcomb_mean.txt")
 COV_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_2024_gaussian_shapefit-bao_ALL_GCcomb_cov.txt")
 
-# Table 11 from https://arxiv.org/pdf/2411.12021
-
-#Rs_fid = 99.0792  #Mpc/h
-RS_FID = 1.0 
+# temporary value... 
+Rd_fid = 144.34599030766822  #Mpc
 
 class DESIY1ShapeFitLikelihood(GaussianLikelihood):
 
@@ -107,19 +105,20 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
         omegab = block[names.cosmological_parameters, 'omega_b']
         omegac = block[names.cosmological_parameters, 'omega_c']
         omegam = block[names.cosmological_parameters, 'omega_m']
+        h0 = block[names.cosmological_parameters, 'h0']
         wb = omegab/omegam
         wc = omegac/omegam
 
-        rs = rd / RS_FID
-        s8 = 8 * rs/ 99.0792
 
-        # should be same with R values from camb_interface.py
-        R = block[names.growth_parameters, "R"]
-        #R_vc, z_vc, sigma8_vc = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_cdm', return_R_z=True)
-        sigma8_vc = block[names.growth_parameters, "sigma_8_vc"]
+        s8 = 8 * rd/Rd_fid # unit should be Mpc/h
+
+        # interpolated function as sa function of R (Mpc/h) and z
+        sigma8_vc = block[names.growth_parameters, "sigma_8_vc"] 
         sigma8_vb = block[names.growth_parameters, "sigma_8_vb"]
         sigma8_vcb = block[names.growth_parameters, "sigma_8_vcb"]
 
+        # unit Mpc/h 
+        R = block[names.growth_parameters, "R"]
         fsigmas8_vc = RectBivariateSpline(z_gro, R, sigma8_vc, kx=3, ky=3)(z_gro, s8)
         fsigmas8_vb = RectBivariateSpline(z_gro, R, sigma8_vb, kx=3, ky=3)(z_gro, s8)
         fsigmas8_vcb = RectBivariateSpline(z_gro, R, sigma8_vcb, kx=3, ky=3)(z_gro, s8)
