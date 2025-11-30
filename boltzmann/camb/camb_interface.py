@@ -683,17 +683,27 @@ def save_matter_power(r, p, block, more_config):
     # other sigma_8 quantities for DESI Shapefit
     #import ipdb; ipdb.set_trace()
     R=np.linspace(5, 15, 20) # unit Mpc/h  
-
     block[names.growth_parameters, "R"]= R
+    velocity_fields = ['v_newtonian_cdm', 'v_newtonian_baryon']
+    velocity_fields_labels = ['c', 'b']
+    _num_field = len(velocity_fields)
+    for t1 in range(_num_field):
+        for t2 in range(t1, _num_field):
 
-    sigma8_vc = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_cdm')
-    block[names.growth_parameters, "sigma_8_vc"] = sigma8_vc[::-1, :]
-    
-    sigma8_vb = r.get_sigmaR(R, var1='v_newtonian_baryon', var2='v_newtonian_baryon')
-    block[names.growth_parameters, "sigma_8_vb"] = sigma8_vb[::-1, :]
+            transfer_type_1 = velocity_fields[t1]
+            transfer_type_2 = velocity_fields[t2]
 
-    sigma8_vcb = r.get_sigmaR(R, var1='v_newtonian_cdm', var2='v_newtonian_baryon')
-    block[names.growth_parameters, "sigma_8_vcb"] = sigma8_vcb[::-1, :]
+            sigma8_t1t2 = r.get_sigmaR(R, var1=transfer_type_1, var2=transfer_type_2)
+
+            if transfer_type_1 == transfer_type_2:
+                section_name = f'sigma_R_v{velocity_fields_labels[t1]}'
+            else:
+                section_name = f'sigma_R_v{velocity_fields_labels[t1]}{velocity_fields_labels[t2]}'
+
+            block[names.growth_parameters, section_name] = sigma8_t1t2[::-1, :]
+
+    sigmaR_dd = r.get_sigmaR(R)
+    block[names.growth_parameters, 'sigma_R_dd'] = sigmaR_dd[::-1, :]
 
 def save_cls(r, p, block):
     # Get total (scalar + tensor) lensed CMB Cls

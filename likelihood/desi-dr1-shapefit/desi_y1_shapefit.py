@@ -26,6 +26,9 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
         self.cov = np.loadtxt(cov_file)
 
         self.feedback = options.get_bool("feedback", default=False)
+        # set true for extended models whose matter power spectrum is modified outside camb 
+        self.use_matter_fields = options.get_bool("use_matter_fields", default=False)
+
         super().__init__(options)
 
     def build_data(self):
@@ -52,7 +55,7 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
             dh_over_rs = values[:, np.where(q_unique == "DH_over_rs")[0][0]]
             f_sigmas8 = values[:, np.where(q_unique == "f_sigmas8")[0][0]]
 
-            print('zeff   DM/rd   DH/rd   fs8')
+            print('zeff   DM/rd   DH/rd   fsigmas8')
             for z, dm, dh, fs in zip(self.zeff, dm_over_rs[:self.nzeff], dh_over_rs[:self.nzeff], f_sigmas8[:self.nzeff]):
                 print(f'{z:.2f}   {dm:.2f}   {dh:.2f}    {fs:.3f}')
 
@@ -111,26 +114,49 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
 
 
         s8 = 8 * rd/Rd_fid # unit should be Mpc/h
-
-        # interpolated function as sa function of R (Mpc/h) and z
-        sigma8_vc = block[names.growth_parameters, "sigma_8_vc"] 
-        sigma8_vb = block[names.growth_parameters, "sigma_8_vb"]
-        sigma8_vcb = block[names.growth_parameters, "sigma_8_vcb"]
-
-        # unit Mpc/h 
+        # unit Mpc/h git
         R = block[names.growth_parameters, "R"]
-        fsigmas8_vc = RectBivariateSpline(z_gro, R, sigma8_vc, kx=3, ky=3)(z_gro, s8)
-        fsigmas8_vb = RectBivariateSpline(z_gro, R, sigma8_vb, kx=3, ky=3)(z_gro, s8)
-        fsigmas8_vcb = RectBivariateSpline(z_gro, R, sigma8_vcb, kx=3, ky=3)(z_gro, s8)
 
-        fsigmas8 = wb **2 * fsigmas8_vb + wc ** 2 * fsigmas8_vc + 2 * wb * wc * fsigmas8_vcb
-        block[names.growth_parameters, "fsigmas8"] = fsigmas8.ravel()
-        fsigs8 = interp(self.zeff, z_gro, block[names.growth_parameters, "fsigmas8"])
+        if self.use_matter_fields: 
+            # for s8z model, it is not straightforward to modify velocity fields. Therefore we use density fields
+            # compute sigmaR from matter PK
+            sigmaR_dd = block[names.growth_parameters, "sigma_R_dd"]
+            sigmas8 = RectBivariateSpline(z_gro, R, sigmaR_dd, kx=3, ky=3)(z_gro, s8).ravel()
+            fsigmas8 = sigmas8 * block[names.growth_parameters, "f_z"]
+
+        else: 
+            #import ipdb; ipdb.set_trace()
+            # interpolated function as sa function of R (Mpc/h) and z
+            # Those quantities need to be computed in the camb interface
+            sigmaR_vc = block[names.growth_parameters, "sigma_R_vc"] 
+            sigmaR_vb = block[names.growth_parameters, "sigma_R_vb"]
+            sigmaR_vcb = block[names.growth_parameters, "sigma_R_vcb"]
+
+            fsigmas8_vc = RectBivariateSpline(z_gro, R, sigmaR_vc, kx=3, ky=3)(z_gro, s8).ravel()
+            fsigmas8_vb = RectBivariateSpline(z_gro, R, sigmaR_vb, kx=3, ky=3)(z_gro, s8).ravel()
+            fsigmas8_vcb = RectBivariateSpline(z_gro, R, sigmaR_vcb, kx=3, ky=3)(z_gro, s8).ravel()
+
+            fsigmas8 = wb **2 * fsigmas8_vb + wc ** 2 * fsigmas8_vc + 2 * wb * wc * fsigmas8_vcb
+            sigmas8 = fsigmas8/ block[names.growth_parameters, "f_z"]
+
+        block[names.growth_parameters, "sigma_s8"] = sigmas8
+        block[names.growth_parameters, "fsigma_s8"] = fsigmas8
+        fsigs8 = interp(self.zeff, z_gro, block[names.growth_parameters, "fsigma_s8"])
         fsigs8[-1] = np.nan
+
+
+        #import matplotlib.pyplot as plt 
+        #fig, ax = plt.subplots()
+        #ax.plot(z_gro, sigmas8_new, label='exact')
+        #ax.plot(z_gro, sigmas8, label='rough')
+        #fig.savefig('lcdm-model-test/sigma_s8.png')
+        #fig, ax = plt.subplots()
+        #ax.plot(z_gro, sigmas8_new/sigmas8 - 1, label='fracdiff')
+        #fig.savefig('lcdm-model-test/sigma_s8_fracdiff.png')
 
         if self.feedback:
             print('Theory distances')
-            print('zeff   DM/rd   DH/rd   fs8')
+            print('zeff   DM/rd   DH/rd   fsigmas8')
             for z, dm, dh, fs in zip(self.zeff, DMrd, DHrd, fsigs8):
                 print(f'{z:.2f}   {dm:.2f}   {dh:.2f}    {fs:.3f}')
 
