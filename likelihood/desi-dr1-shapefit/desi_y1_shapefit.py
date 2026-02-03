@@ -12,6 +12,8 @@ COV_DEFAULT_FILENAME=os.path.join(ROOT_DIR, "desi_2024_gaussian_shapefit-bao_ALL
 
 # temporary value... 
 Rd_fid = 144.34599030766822  #Mpc
+#Rd_h_fid = 144.34599030766822 * 0.69  #Mpc/h
+Rd_h_fid = 99.0792 # in Mpc/h, DESI FS fiducial rd (https://arxiv.org/pdf/2411.12021)
 
 class DESIY1ShapeFitLikelihood(GaussianLikelihood):
 
@@ -72,10 +74,11 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
         z = block[names.distances, 'z']
 
         # Sound horizon at the drag epoch
+        h = block[names.cosmological_parameters, 'h0']
         rd = block[names.distances, "rs_zdrag"]
+        rd_h = rd*h # in Mpc/h
         if self.feedback:
-            print(f'rs_zdrag = {rd}')
-
+            print(f'rs_zdrag = {rd_h} (in Mpc/h)')
         # Comoving distance
         DM_z = block[names.distances, 'd_m']  # in Mpc
 
@@ -108,12 +111,11 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
         omegab = block[names.cosmological_parameters, 'omega_b']
         omegac = block[names.cosmological_parameters, 'omega_c']
         omegam = block[names.cosmological_parameters, 'omega_m']
-        h0 = block[names.cosmological_parameters, 'h0']
         wb = omegab/omegam
         wc = omegac/omegam
 
 
-        s8 = 8 * rd/Rd_fid # unit should be Mpc/h
+        s8 = 8 * rd_h/Rd_h_fid # unit should be Mpc/h
         # unit Mpc/h git
         R = block[names.growth_parameters, "R"]
 
