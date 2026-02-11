@@ -115,8 +115,8 @@ class DESIY1ShapeFitLikelihood(GaussianLikelihood):
         wc = omegac/omegam
 
 
-        s8 = 8 * rd_h/Rd_h_fid # unit should be Mpc/h
-        # unit Mpc/h git
+        s8 = 8 * rd_h/Rd_h_fid # unit Mpc/h
+        
         R = block[names.growth_parameters, "R"]
 
         if self.use_matter_fields: 
