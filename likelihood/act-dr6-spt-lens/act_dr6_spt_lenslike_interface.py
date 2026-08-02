@@ -18,6 +18,9 @@ def setup(options):
     data_directory = os.path.join(dirname, 'data/v1.2/')
     data_directory = options.get_string(option_section, 'data_directory', default=data_directory)
 
+    # cosmoSIS theory output 
+    sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
+
     if not os.path.exists(data_directory):
         raise FileNotFoundError('Required data file not found at {}.\nPlease obtain it and place it correctly.\nThe script get-act-data.sh will download and place it.'.format(data_directory))
 
@@ -40,7 +43,7 @@ def setup(options):
         scale_cov = float(scale_cov)
     varying_cmb_alens = options.get_bool(option_section, 'varying_cmb_alens', default=False) # Whether to divide the theory spectrum by Alens
 
-    if varying_cmb_alens and not block.has_value(cosmo, 'A_lens'):
+    if varying_cmb_alens and not block.has_value(cosmo, 'alens'):
         raise RuntimeError('You have specified varying_cmb_alens: True to vary A_lens in the CMB lensing spectra, but given no A_lens value in the parameter file.')
 
     # This dict will now have entries like `data_binned_clkk` (binned data vector), `cov`
@@ -53,6 +56,24 @@ def setup(options):
                                            mock=mock,nsims_act=nsims_act,nsims_planck=nsims_planck,
                                            trim_lmax=trim_lmax,scale_cov=scale_cov)
 
+    # replace real data with synthetic data 
+    if sim_data_directory != '': 
+
+        sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
+        f1 = sim_ell * (sim_ell + 1) / (2 * np.pi)
+        sim_cl_pp = np.genfromtxt( sim_data_directory + 'cmb_cl/pp.txt') / f1
+        sim_cl_kk = act_dr6_lenslike.pp_to_kk(sim_cl_pp, sim_ell)
+        sim_clkk_interp = scipy.interpolate.interp1d(sim_ell, sim_cl_kk)
+
+        ell_data = data_dict['bcents_act']
+        sim_binned_clkk = sim_clkk_interp(ell_data)
+        if data_dict['include_planck']: 
+            ell_data_planck = data_dict['bcents_planck']
+            ell_data = np.append(ell_data, ell_data_planck)
+            sim_binned_clkk_planck = sim_clkk_interp(ell_data_planck)
+            sim_binned_clkk = np.append(sim_binned_clkk, sim_binned_clkk_planck)
+        data_dict['data_binned_clkk'] = sim_binned_clkk
+        
     data_dict['cosmosis_like_only'] = like_only
     data_dict['trim_lmax'] = trim_lmax
     data_dict['varying_cmb_alens'] = varying_cmb_alens
@@ -83,17 +104,13 @@ def execute(block, config):
     cl_pp = block[names.cmb_cl, 'pp'] / f1
 
     if data_dict['varying_cmb_alens']:
-        cl_pp /= block[cosmo, "A_lens"]
+        cl_pp /= block[cosmo, "alens"]
 
     # if data_dict['limber']:
     #     cl_kk = get_limber_clkk()
     # else:
     #     cl_kk = act_dr6_lenslike.pp_to_kk(cl_pp, ell)
     cl_kk = act_dr6_spt_lenslike.pp_to_kk(cl_pp, ell)
-
-    # from matplotlib import pyplot as plt
-    # plt.ion()
-    # import pdb; pdb.set_trace()
 
     # Then call the act code
     lnlike, bclkk = act_dr6_spt_lenslike.generic_lnlike(data_dict,ell, cl_kk, ell, cl_tt, cl_ee, cl_te, cl_bb, data_dict['trim_lmax'],
