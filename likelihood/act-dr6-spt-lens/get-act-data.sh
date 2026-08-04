@@ -7,9 +7,11 @@ then
 else
     mkdir -p data
     pushd data
-    wget https://lambda.gsfc.nasa.gov/data/suborbital/ACT/ACT_dr6/likelihood/data/ACT_dr6_likelihood_v1.2.tgz
-    tar -zxvf ACT_dr6_likelihood_v1.2.tgz
-    rm ACT_dr6_likelihood_v1.2.tgz
+    wget https://lambda.gsfc.nasa.gov/data/suborbital/act_spt_joint/spt_act_likelihood-1.0.tar.gz
+    tar -zxvf spt_act_likelihood-1.0.tar.gz
+    cp -r spt_act_likelihood-1.0/act_dr6_spt_lenslike/data/v1.2/ .
+    rm -rf spt_act_likelihood-1.0
+    rm spt_act_likelihood-1.0.tar.gz
     popd
 fi
 popd
