@@ -6,6 +6,7 @@ from cosmosis.datablock import option_section, names
 cosmo = names.cosmological_parameters
 import numpy as np
 import os
+import scipy
 
 dirname = os.path.split(__file__)[0]
 
@@ -19,7 +20,7 @@ def setup(options):
     data_directory = options.get_string(option_section, 'data_directory', default=data_directory)
 
     # cosmoSIS theory output 
-    sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
+    sim_data_path = options.get_string(option_section, 'use_data_from_test', default='')
 
     if not os.path.exists(data_directory):
         raise FileNotFoundError('Required data file not found at {}.\nPlease obtain it and place it correctly.\nThe script get-act-data.sh will download and place it.'.format(data_directory))
@@ -55,25 +56,40 @@ def setup(options):
                                            like_corrections=like_corrections,apply_hartlap=apply_hartlap,
                                            mock=mock,nsims_act=nsims_act,nsims_planck=nsims_planck,
                                            trim_lmax=trim_lmax,scale_cov=scale_cov)
+    
+    if sim_data_path != '': 
+        print('SPT+ACT Lensing likelihood uses synthetic data from:', sim_data_path) 
+        sim_binned_clkk = np.genfromtxt(sim_data_path)
+        data_dict['data_binned_clkk'] = sim_binned_clkk
 
+    """
     # replace real data with synthetic data 
     if sim_data_directory != '': 
 
         sim_ell = np.genfromtxt( sim_data_directory + 'cmb_cl/ell.txt')
         f1 = sim_ell * (sim_ell + 1) / (2 * np.pi)
         sim_cl_pp = np.genfromtxt( sim_data_directory + 'cmb_cl/pp.txt') / f1
-        sim_cl_kk = act_dr6_lenslike.pp_to_kk(sim_cl_pp, sim_ell)
+        sim_cl_kk = act_dr6_spt_lenslike.pp_to_kk(sim_cl_pp, sim_ell)
         sim_clkk_interp = scipy.interpolate.interp1d(sim_ell, sim_cl_kk)
 
         ell_data = data_dict['bcents_act']
         sim_binned_clkk = sim_clkk_interp(ell_data)
-        if data_dict['include_planck']: 
+        # order: act + planck + spt 
+        if data_dict['include_spt_no_planck']: 
+            ell_data_spt = data_dict['bcents_spt']
+            ell_data = np.append(ell_data, ell_data_spt)
+            sim_binned_clkk_spt = sim_clkk_interp(ell_data_spt)
+            sim_binned_clkk = np.append(sim_binned_clkk, sim_binned_clkk_spt)
+        elif data_dict['include_planck'] and data_dict['include_spt']: 
             ell_data_planck = data_dict['bcents_planck']
-            ell_data = np.append(ell_data, ell_data_planck)
+            ell_data_spt = data_dict['bcents_spt']
+            ell_data = np.hstack([ell_data, ell_data_planck, ell_data_spt])
             sim_binned_clkk_planck = sim_clkk_interp(ell_data_planck)
-            sim_binned_clkk = np.append(sim_binned_clkk, sim_binned_clkk_planck)
+            sim_binned_clkk_spt = sim_clkk_interp(ell_data_spt)
+            sim_binned_clkk = np.hstack([sim_binned_clkk, sim_binned_clkk_planck, sim_binned_clkk_spt])
         data_dict['data_binned_clkk'] = sim_binned_clkk
-        
+    """
+
     data_dict['cosmosis_like_only'] = like_only
     data_dict['trim_lmax'] = trim_lmax
     data_dict['varying_cmb_alens'] = varying_cmb_alens
@@ -125,10 +141,10 @@ def execute(block, config):
     # import pdb; pdb.set_trace()  
 
     if not data_dict['cosmosis_like_only']:
-        block[names.data_vector, 'act_dr6_lens_theory'] = bclkk
-        block[names.data_vector, 'act_dr6_lens_data'] = data_dict['data_binned_clkk']
-        block[names.data_vector, 'act_dr6_lens_covariance'] = data_dict['cov']
-        block[names.data_vector, 'act_dr6_lens_inverse_covariance'] = data_dict['cinv']
+        block[names.data_vector, 'act_dr6_spt_lens_theory'] = bclkk
+        block[names.data_vector, 'act_dr6_spt_lens_data'] = data_dict['data_binned_clkk']
+        block[names.data_vector, 'act_dr6_spt_lens_covariance'] = data_dict['cov']
+        block[names.data_vector, 'act_dr6_spt_lens_inverse_covariance'] = data_dict['cinv']
 
 
     return 0
