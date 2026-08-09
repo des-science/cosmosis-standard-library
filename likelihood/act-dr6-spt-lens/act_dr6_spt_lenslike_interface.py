@@ -141,6 +141,7 @@ def execute(block, config):
     # import pdb; pdb.set_trace()  
 
     if not data_dict['cosmosis_like_only']:
+        block[names.data_vector, 'act_dr6_spt_lens_ellbin'] = np.hstack([data_dict['bcents_act'], data_dict['bcents_planck'], data_dict['bcents_spt']])
         block[names.data_vector, 'act_dr6_spt_lens_theory'] = bclkk
         block[names.data_vector, 'act_dr6_spt_lens_data'] = data_dict['data_binned_clkk']
         block[names.data_vector, 'act_dr6_spt_lens_covariance'] = data_dict['cov']

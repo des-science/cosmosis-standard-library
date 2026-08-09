@@ -21,7 +21,7 @@ def setup(options):
     data_directory = options.get_string(option_section, 'data_directory', default=data_directory)
 
     # cosmoSIS theory output 
-    sim_data_directory = options.get_string(option_section, 'use_data_from_test', default='')
+    sim_data_path = options.get_string(option_section, 'use_data_from_test', default='')
 
     if not os.path.exists(data_directory):
         raise FileNotFoundError('Required data file not found at {}.\nPlease obtain it and place it correctly.\nThe script get-act-data.sh will download and place it.'.format(data_file))
@@ -58,6 +58,11 @@ def setup(options):
                                            mock=mock,nsims_act=nsims_act,nsims_planck=nsims_planck,
                                            trim_lmax=trim_lmax,scale_cov=scale_cov)
 
+    if sim_data_path != '': 
+        print('SPT+ACT Lensing likelihood uses synthetic data from:', sim_data_path) 
+        sim_binned_clkk = np.genfromtxt(sim_data_path)
+        data_dict['data_binned_clkk'] = sim_binned_clkk
+    """
     # replace real data with synthetic data 
     if sim_data_directory != '': 
 
@@ -75,6 +80,7 @@ def setup(options):
             sim_binned_clkk_planck = sim_clkk_interp(ell_data_planck)
             sim_binned_clkk = np.append(sim_binned_clkk, sim_binned_clkk_planck)
         data_dict['data_binned_clkk'] = sim_binned_clkk
+    """
 
     data_dict['cosmosis_like_only'] = like_only
     data_dict['trim_lmax'] = trim_lmax
@@ -107,7 +113,7 @@ def execute(block, config):
     cl_pp = block[names.cmb_cl, 'pp'] / f1
 
     if data_dict['varying_cmb_alens']:
-        cl_pp /= block[cosmo, "alens"]
+        cl_pp /= block[cosmo, "A_lens"]
 
     # if data_dict['limber']:
     #     cl_kk = get_limber_clkk()
