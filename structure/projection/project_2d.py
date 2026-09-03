@@ -189,12 +189,44 @@ class IntrinsicPower3D(Power3D):
     section = "intrinsic_power"
     source_specific = True
 
+class Intrinsicxa1a1Power3D(Power3D):
+    section = "intrinsic_power_xa1a1"
+    source_specific = True
+
+class Intrinsicxa2a2Power3D(Power3D):
+    section = "intrinsic_power_xa2a2"
+    source_specific = True
+
+class Intrinsicxa1a2Power3D(Power3D):
+    section = "intrinsic_power_xa1a2"
+    source_specific = True
+
 class IntrinsicBBPower3D(Power3D):
     section = "intrinsic_power_bb"
     source_specific = True
 
+class IntrinsicBBxa1a1Power3D(Power3D):
+    section = "intrinsic_power_bb_xa1a1"
+    source_specific = True
+
+class IntrinsicBBxa2a2Power3D(Power3D):
+    section = "intrinsic_power_bb_xa2a2"
+    source_specific = True
+
+class IntrinsicBBxa1a2Power3D(Power3D):
+    section = "intrinsic_power_bb_xa1a2"
+    source_specific = True
+
 class MatterGalaxyPower3D(Power3D):
     section = "matter_galaxy_power"
+    source_specific = True
+
+class MatterIntrinsicxa1Power3D(Power3D):
+    section = "matter_intrinsic_power_xa1"
+    source_specific = True
+
+class MatterIntrinsicxa2Power3D(Power3D):
+    section = "matter_intrinsic_power_xa2"
     source_specific = True
 
 class MatterIntrinsicPower3D(Power3D):
@@ -203,6 +235,14 @@ class MatterIntrinsicPower3D(Power3D):
 
 class GalaxyIntrinsicPower3D(Power3D):
     section = "galaxy_intrinsic_power"
+    source_specific = True
+
+class GalaxyIntrinsicxa1Power3D(Power3D):
+    section = "galaxy_intrinsic_power_xa1"
+    source_specific = True
+
+class GalaxyIntrinsicxa2Power3D(Power3D):
+    section = "galaxy_intrinsic_power_xa2"
     source_specific = True
 
 class WeylPower3D(Power3D):
@@ -972,6 +1012,21 @@ class SpectrumType(Enum):
         prefactor_type = ("lensing", "lensing")
         has_rsd = False
 
+    class ShearIntrinsicxa1(Spectrum):
+        power_3d_type = MatterIntrinsicxa1Power3D
+        kernel_types = ("W", "N")
+        autocorrelation = False
+        name = names.shear_cl_gi + "_xa1"
+        prefactor_type = ("lensing", None)
+        has_rsd = False
+
+    class ShearIntrinsicxa2(Spectrum):
+        power_3d_type = MatterIntrinsicxa2Power3D
+        kernel_types = ("W", "N")
+        autocorrelation = False
+        name = names.shear_cl_gi + "_xa2"
+        prefactor_type = ("lensing", None)
+        has_rsd = False
 
     class ShearIntrinsic(Spectrum):
         power_3d_type = MatterIntrinsicPower3D
@@ -989,11 +1044,59 @@ class SpectrumType(Enum):
         prefactor_type = (None, None)
         has_rsd = False
 
+    class IntrinsicIntrinsicxa1a1(Spectrum):
+        power_3d_type = Intrinsicxa1a1Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = True
+        name = names.shear_cl_ii + "_xa1a1"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class IntrinsicIntrinsicxa2a2(Spectrum):
+        power_3d_type = Intrinsicxa2a2Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = True
+        name = names.shear_cl_ii + "_xa2a2"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class IntrinsicIntrinsicxa1a2(Spectrum):
+        power_3d_type = Intrinsicxa1a2Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = names.shear_cl_ii + "_xa1a2"
+        prefactor_type = (None, None)
+        has_rsd = False
+
     class IntrinsicbIntrinsicb(Spectrum):
         power_3d_type = IntrinsicBBPower3D
         kernel_types = ("N", "N")
         autocorrelation = True
         name = "shear_cl_bb"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class IntrinsicbIntrinsicbxa1a1(Spectrum):
+        power_3d_type = IntrinsicBBxa1a1Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = True
+        name = "shear_cl_bb_xa1a1"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class IntrinsicbIntrinsicbxa2a2(Spectrum):
+        power_3d_type = IntrinsicBBxa2a2Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = True
+        name = "shear_cl_bb_xa2a2"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class IntrinsicbIntrinsicbxa1a2(Spectrum):
+        power_3d_type = IntrinsicBBxa1a2Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = "shear_cl_bb_xa1a2"
         prefactor_type = (None, None)
         has_rsd = False
 
@@ -1037,11 +1140,43 @@ class SpectrumType(Enum):
         prefactor_type = (None, None)
         has_rsd = False
 
+    class DensityIntrinsicxa1(Spectrum):
+        power_3d_type = MatterIntrinsicxa1Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = "galaxy_intrinsic_cl_xa1"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class DensityIntrinsicxa2(Spectrum):
+        power_3d_type = MatterIntrinsicxa2Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = "galaxy_intrinsic_cl_xa2"
+        prefactor_type = (None, None)
+        has_rsd = False
+
     class MagnificationIntrinsic(Spectrum):
         power_3d_type = MatterIntrinsicPower3D
         kernel_types = ("W", "N")
         autocorrelation = False
         name = "magnification_intrinsic_cl"
+        prefactor_type = ("mag", None)
+        has_rsd = False
+
+    class MagnificationIntrinsicxa1(Spectrum):
+        power_3d_type = MatterIntrinsicxa1Power3D
+        kernel_types = ("W", "N")
+        autocorrelation = False
+        name = "magnification_intrinsic_cl_xa1"
+        prefactor_type = ("mag", None)
+        has_rsd = False
+
+    class MagnificationIntrinsicxa2(Spectrum):
+        power_3d_type = MatterIntrinsicxa2Power3D
+        kernel_types = ("W", "N")
+        autocorrelation = False
+        name = "magnification_intrinsic_cl_xa2"
         prefactor_type = ("mag", None)
         has_rsd = False
 
@@ -1162,6 +1297,22 @@ class SpectrumType(Enum):
         kernel_types = ("N", "N")
         autocorrelation = False
         name = "galaxy_intrinsic_cl"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class LingalIntrinsicxa1(LingalLensingSpectrum):
+        power_3d_type = MatterIntrinsicxa1Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = "galaxy_intrinsic_cl_xa1"
+        prefactor_type = (None, None)
+        has_rsd = False
+
+    class LingalIntrinsicxa2(LingalLensingSpectrum):
+        power_3d_type = MatterIntrinsicxa2Power3D
+        kernel_types = ("N", "N")
+        autocorrelation = False
+        name = "galaxy_intrinsic_cl_xa2"
         prefactor_type = (None, None)
         has_rsd = False
 
@@ -1357,7 +1508,7 @@ class SpectrumCalculator(object):
         self.do_exact_section_names = []
         self.auto_only_section_names = []
 
-        any_spectra_option_found = False
+        any_spectra_option_found = False   #; import pdb ; pdb.set_trace()
         for spectrum in self.spectrumType:
 
             spectrum = spectrum.value

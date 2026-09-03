@@ -390,6 +390,42 @@ def execute(block, config):
     else:
         raise ValueError(ia_model + " is not a supported IA model")
 
+    #####################################
+    # Adding this to try to get TATT per-bin to work
+    # we need to save the power spectrum terms with different A1 and A2 scalings separately
+
+    # GI
+    block.put_grid(names.matter_intrinsic_power + suffix + "_xa1", "z", z_lin, "k_h", k_use, "p_k",
+        E_factor * (IA_terms["nla_GI"] + IA_terms["ta_GI"]) )
+
+    block.put_grid(names.matter_intrinsic_power + suffix + "_xa2", "z", z_lin, "k_h", k_use, "p_k",
+        E_factor * (IA_terms["tt_GI"]) )
+
+
+    # II EE
+    block.put_grid(names.intrinsic_power + suffix + "_xa1a1", "z", z_lin, "k_h", k_use, "p_k",
+        E_factor * (IA_terms["nla_II_EE"] + IA_terms["ta_II_EE"] ) )
+
+    block.put_grid(names.intrinsic_power + suffix + "_xa2a2", "z", z_lin, "k_h", k_use, "p_k",
+        E_factor * IA_terms["tt_II_EE"] )
+
+    block.put_grid(names.intrinsic_power + suffix + "_xa1a2", "z", z_lin, "k_h", k_use, "p_k",
+        E_factor * IA_terms["mix_II_EE"] )
+
+
+    # II BB
+    block.put_grid("intrinsic_power_bb" + suffix + "_xa1a1", "z", z_lin, "k_h", k_use, "p_k", 
+        B_factor * IA_terms["ta_II_BB"])
+
+    block.put_grid("intrinsic_power_bb" + suffix + "_xa2a2", "z", z_lin, "k_h", k_use, "p_k", 
+        B_factor * IA_terms["tt_II_BB"])
+
+    block.put_grid("intrinsic_power_bb" + suffix + "_xa1a2", "z", z_lin, "k_h", k_use, "p_k", 
+        B_factor * IA_terms["mix_II_BB"])
+
+
+    #####################################
+
     #  Saving results to block. Total EE and BB contributions
     block.put_grid(
         "intrinsic_power_ee" + suffix, "z", z_lin, "k_h", k_use, "p_k", ii_ee_total
@@ -443,5 +479,12 @@ def execute(block, config):
             "p_k",
             gal_i_total,
         )
+
+        # gI
+        block.put_grid(names.galaxy_intrinsic_power + suffix + "_xa1", "z", z_lin, "k_h", k_use, "p_k",
+            b_temp * E_factor * (IA_terms["nla_GI"] + IA_terms["ta_GI"]) )
+
+        block.put_grid(names.galaxy_intrinsic_power + suffix + "_xa2", "z", z_lin, "k_h", k_use, "p_k",
+            b_temp * E_factor * (IA_terms["tt_GI"]) )
 
     return 0
